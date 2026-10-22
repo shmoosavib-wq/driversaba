@@ -1,0 +1,15 @@
+button[aria-label="بستن"] svg path {
+  stroke-width: 3 !important;
+  stroke: #de1135;
+}
+
+.react-joyride__tooltip div h1 {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+
+.react-joyride__tooltip div div {
+  text-align: right !important;
+  direction: rtl !important;
+  padding: 16px 0 0 0 !important;
+}

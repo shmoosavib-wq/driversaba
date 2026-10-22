@@ -1,0 +1,28 @@
+import styled from "styled-components";
+
+export const HomeContent = styled.div`min-height:calc(100dvh - 58px);display:flex;flex-direction:column`;
+export const CreditCard = styled.div`margin:14px 16px 0;background:linear-gradient(135deg,#01acbc 0%,#008c9a 100%);border-radius:22px;padding:18px;color:#fff;box-shadow:0 16px 34px -14px #008c9a99;display:flex;align-items:center;gap:10px`;
+export const CcTxt = styled.div`flex:1;min-width:0`;
+export const CcLab = styled.div`font-size:12px;font-weight:700;opacity:.9;display:flex;align-items:center;gap:6px;& i{width:18px;height:18px;border-radius:50%;background:#ffffff38;display:grid;place-items:center;font-size:10px;font-style:normal}`;
+export const CcBig = styled.div`font-size:26px;font-weight:900;margin:5px 0 2px;& small{font-size:12px;font-weight:700;opacity:.85}`;
+export const CcSub = styled.div`font-size:11px;font-weight:700;opacity:.85`;
+export const CcRow = styled.div`display:flex;justify-content:space-between;font-size:11px;font-weight:700;opacity:.95;margin:12px 0 6px`;
+export const CcBar = styled.div<{ $pct: number }>`height:7px;border-radius:99px;background:#ffffff40;overflow:hidden;& i{display:block;height:100%;width:${({ $pct }) => $pct}%;background:#fff;border-radius:99px;transition:width .8s ease}`;
+export const HPills = styled.div`display:flex;gap:6px;flex-wrap:wrap;margin:12px 16px 0`;
+export const HPill = styled.span`background:#effafa;border:1px solid #d9f1f4;color:#008c9a;border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:700`;
+export const SmallBtn = styled.button`height:38px;padding:0 11px;border-radius:12px;border:0;background:#01acbc;color:#fff;font-family:inherit;font-size:10.5px;font-weight:700;white-space:nowrap;&:active{transform:scale(.97)}`;
+export const ActiveBuy = styled.div`display:flex;align-items:center;gap:11px;margin:12px 16px 0;padding:14px;background:#fff;border:1px solid #e4eaed;border-radius:16px;cursor:pointer;box-shadow:0 2px 10px #22303808`;
+export const ActiveIc = styled.span`width:42px;height:42px;border-radius:13px;background:#fff6e0;display:grid;place-items:center;font-size:18px;flex:0 0 auto`;
+export const ActiveTx = styled.div`flex:1;min-width:0;& b{font-size:12.5px;font-weight:900;display:block;color:#223038}& small{font-size:10.5px;color:#7a8a94;font-weight:700}`;
+export const CtaBar = styled.div`position:sticky;bottom:0;z-index:4;margin-top:auto;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#f5f7f800 0%,#f5f7f8 34%)`;
+export const CtaBtn = styled.button`width:100%;height:50px;border-radius:12px;border:0;background:#01acbc;color:#fff;font-family:inherit;font-size:16px;font-weight:600;&:active{transform:scale(.975)}`;
+export const LinkBtn = styled.button`width:100%;margin-top:8px;height:42px;border-radius:12px;border:1.4px solid #d2d2d2;background:#fff;color:#223038;font-family:inherit;font-size:13px;font-weight:600`;
+export const SheetHead = styled.div`display:flex;align-items:center;justify-content:space-between;font-size:16px;& button{border:0;background:none;font-size:24px;color:#7a8a94;width:34px;height:34px}`;
+export const ContractLink = styled.button`display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e4eaed;border-radius:14px;padding:12px;font-family:inherit;font-size:12px;font-weight:700;color:#008c9a;text-align:right`;
+export const ContractText = styled.div`background:#fff;border:1px solid #e4eaed;border-radius:14px;padding:12px;font-size:11px;line-height:2;color:#4b5b65`;
+export const CheckRow = styled.label`display:flex;gap:8px;font-size:11px;line-height:1.9;align-items:flex-start;& input{accent-color:#01acbc;margin-top:5px}`;
+export const StatusCard = styled.div`background:#fff;border:1px solid #e4eaed;border-radius:16px;padding:14px;display:grid;gap:8px;& p{margin:0}`;
+export const StatusHead = styled.div`display:flex;align-items:center;gap:8px;font-size:13px;& i{width:10px;height:10px;border-radius:50%;background:#f0a020;box-shadow:0 0 0 4px #f0a02030}`;
+export const Steps = styled.div`display:flex;gap:6px;& i{flex:1;height:5px;border-radius:99px;background:#e4eaed}& i.on{background:#01acbc}`;
+export const FleetChoice = styled.button<{ $on: boolean }>`display:flex;align-items:center;gap:11px;background:#fff;border:1px solid ${({ $on }) => ($on ? "#01acbc" : "#e4eaed")};box-shadow:${({ $on }) => ($on ? "0 0 0 2px #d9f1f4" : "none")};border-radius:16px;padding:12px;font-family:inherit;text-align:right;width:100%;& .art{font-size:29px;background:#effafa;padding:7px 9px;border-radius:12px}& b{display:block;font-size:12px;color:#223038}& small{font-size:10px;color:#7a8a94}& .dot{margin-right:auto;width:18px;height:18px;border-radius:50%;border:2px solid ${({ $on }) => ($on ? "#01acbc" : "#c9d3d8")};background:${({ $on }) => ($on ? "radial-gradient(#01acbc 45%,#fff 50%)" : "#fff")}}`;
+export const EmptyFleet = styled.div`background:#fff;border:1px dashed #e2b758;border-radius:16px;padding:15px;text-align:center;font-size:11px;line-height:2;color:#6b5a36;& b{display:block;color:#493d27;font-size:13px;margin-bottom:3px}`;

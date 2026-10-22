@@ -1,0 +1,6 @@
+button[aria-label="Close"] {
+  width: 30px;
+  height: 30px;
+  filter: invert(98%) sepia(5%) saturate(900000%) hue-rotate(333deg)
+    brightness(90%) contrast(900%);
+}

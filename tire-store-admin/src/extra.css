@@ -1,0 +1,20 @@
+.pager{display:flex;justify-content:center;align-items:center;gap:6px;margin:16px 0 4px;flex-wrap:wrap}
+.pager button{min-width:36px;height:36px;padding:0 12px;border-radius:10px;background:#fff;border:1px solid var(--line);font-family:inherit;font-weight:800;font-size:12.5px;color:#5B6B74;cursor:pointer}
+.pager button.on{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 6px 14px -6px rgba(0,151,169,.55)}
+.pager button:disabled{opacity:.45;cursor:not-allowed}
+.prod-actions.confirm{align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:var(--muted)}
+.prod-actions.confirm button{width:auto;padding:0 10px;height:30px;font-family:inherit;font-weight:800;font-size:11.5px}
+.prod-actions.confirm .yes{background:var(--pink);color:#fff;border-color:var(--pink)}
+.pform .pfoot.full{grid-column:1/-1}
+.img-upload.multi{flex-direction:column;align-items:stretch}
+.img-upload .thumbs{display:flex;flex-wrap:wrap;gap:9px}
+.img-upload .thumb{position:relative;width:86px;height:68px;border-radius:11px;overflow:hidden;border:1px solid var(--line);background:#EFFAFA;padding:0}
+.img-upload .thumb img{width:100%;height:100%;object-fit:cover}
+.img-upload .thumb button{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:rgba(16,42,51,.75);color:#fff;border:0;font-size:14px;line-height:1;cursor:pointer}
+.img-upload .thumb .main{position:absolute;bottom:3px;right:3px;background:var(--teal);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:6px}
+.img-upload .thumb.add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:1.5px dashed var(--teal);color:var(--teal-600);background:#fff;cursor:pointer;position:static}
+.img-upload .thumb.add small{font-size:10px;font-weight:800}
+.pager-info{flex:1 0 100%;text-align:center;font-size:11.5px;font-weight:700;color:var(--muted)}
+.prod-table .price-cell .price-was{display:block;color:#93A1A7;font-weight:700;text-decoration:line-through;font-size:11px;margin-bottom:1px}
+.prod-table .price-cell .price-now{display:block;color:#D03A2F;font-weight:900}
+.prod-table .price-cell .price-off{display:inline-block;margin-top:3px;padding:2px 8px;border-radius:99px;background:#FFECEB;color:#D03A2F;border:1px solid #FFD2CE;font-size:9.5px;font-weight:900;direction:rtl}

@@ -1,0 +1,19 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.sababar.twa",
+      "sha256_cert_fingerprints": [
+        "24:AC:FE:47:8B:B0:32:1A:67:90:E5:BC:3E:F5:13:F8:8B:96:75:9C:26:AD:C1:B1:14:ED:B6:64:51:CD:37:62"
+      ]
+    }
+  },
+  {
+    "relation": ["check_validation"],
+    "target": {
+      "namespace": "cafebazaar_twa",
+      "package_name": "com.sababar.twa"
+    }
+  }
+]

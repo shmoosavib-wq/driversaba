@@ -1,0 +1,38 @@
+.DatePicker {
+  width: inherit;
+  z-index: 1 !important;
+}
+.InputPicker {
+  width: 100%;
+  font-size: 14px !important;
+  outline: none !important;
+  text-align: right !important;
+  border: 1px solid;
+  border-radius: 1rem;
+  height: 3rem;
+}
+.Calendar {
+  box-shadow: 0 1em 3em rgba(156, 136, 255, 0.3);
+  font-size: 0.6rem !important;
+  /* z-index: 10 !important; */
+  /* z-index: -1 !important; */
+}
+
+/* DropDown & DatePicker */
+.my-custom-datepicker-div-element .DatePicker__calendarContainer {
+  /* position: absolute !important;
+    top: 55%; */
+  left: 450%;
+}
+
+.my-custom-datepicker-div-element .DatePicker__calendarArrow {
+  display: none !important;
+}
+
+.my-custom-datepicker-input {
+  opacity: 0;
+  width: 40px !important;
+  background: transparent !important;
+  cursor: pointer;
+  z-index: 1 !important;
+}

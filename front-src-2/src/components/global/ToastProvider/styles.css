@@ -1,0 +1,19 @@
+.toast-close-icon {
+  align-self: center !important;
+  width: 25px !important;
+  height: 25px !important;
+  color: #fff !important;
+}
+
+.toaster-body {
+  width: 100% !important;
+  direction: rtl !important;
+  color: #fff !important;
+  margin-bottom: 68px !important;
+}
+@media (min-width: 1024px) {
+  .toaster-body {
+    width: 348px !important;
+    margin-bottom: 0 !important;
+  }
+}

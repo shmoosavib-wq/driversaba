@@ -1,0 +1,129 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SabaBar Tire Store API",
+    "version": "1.0.0",
+    "description": "مستند API فروشگاه تایر صبابار. برای اجرای محلی، API را روی پورت 5188 اجرا کنید. مسیرهای اعتبار، سفارش، اقساط و پرداخت فقط در Development در دسترس‌اند و در Production تا تکمیل احراز هویت ERP و persistence مالی map نمی‌شوند. مقدار GET /api/store/capabilities وضعیت قابلیت خرید را اعلام می‌کند."
+  },
+  "servers": [{ "url": "http://localhost:5188", "description": "محیط محلی توسعه" }],
+  "tags": [
+    { "name": "Health" },
+    { "name": "Store" },
+    { "name": "Orders" },
+    { "name": "Installments and payment" },
+    { "name": "Admin" }
+  ],
+  "paths": {
+    "/health": {
+      "get": { "tags": ["Health"], "summary": "وضعیت سرویس", "responses": { "200": { "description": "سرویس فعال است", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string", "example": "ok" } } } } } } } }
+    },
+    "/health/ready": {
+      "get": { "tags": ["Health"], "summary": "آمادگی دریافت ترافیک", "description": "اتصال پایگاه داده را بررسی می‌کند و در صورت migration اعمال‌نشده‌ی SQL Server پاسخ 503 می‌دهد.", "responses": { "200": { "description": "سرویس آماده است" }, "503": { "description": "پایگاه داده در دسترس نیست یا schema آماده نیست" } } }
+    },
+    "/api/store/shops": {
+      "get": { "tags": ["Store"], "summary": "فهرست فروشگاه‌ها", "responses": { "200": { "description": "فروشگاه‌ها", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Shop" } } } } } } }
+    },
+    "/api/store/capabilities": {
+      "get": { "tags": ["Store"], "summary": "قابلیت‌های فعال این استقرار", "responses": { "200": { "description": "وضعیت فعال‌بودن خرید", "content": { "application/json": { "schema": { "type": "object", "required": ["commerceEnabled"], "properties": { "commerceEnabled": { "type": "boolean", "description": "در Production تا تکمیل احراز هویت و persistence برابر false است." } } } } } } } }
+    },
+    "/api/store/products": {
+      "get": {
+        "tags": ["Store"], "summary": "فهرست محصولات کاتالوگ", "parameters": [
+          { "name": "shopId", "in": "query", "schema": { "type": "integer" }, "description": "شناسه فروشگاه" },
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "جستجو در مشخصات محصول" }
+        ],
+        "responses": { "200": { "description": "محصولات", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } } } } } }
+      }
+    },
+    "/api/store/credit": {
+      "get": { "tags": ["Store"], "summary": "اعتبار فعلی راننده", "responses": { "200": { "description": "وضعیت و سقف اعتبار", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Credit" } } } } } }
+    },
+    "/api/store/credit/request": {
+      "post": { "tags": ["Store"], "summary": "ثبت درخواست اعتبار", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreditRequest" }, "example": { "fleetId": 101, "amount": 100000000 } } } }, "responses": { "200": { "description": "درخواست ثبت‌شده" }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/orders/quote": {
+      "post": { "tags": ["Orders"], "summary": "محاسبه پیش‌فاکتور قبل از ثبت سفارش", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/QuoteRequest" }, "example": { "shopId": 1, "paymentMode": "Installments", "installmentCount": 4, "items": [{ "productId": 1, "quantity": 1 }] } } } }, "responses": { "200": { "description": "قیمت و اقساط", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Quote" } } } }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/orders": {
+      "get": { "tags": ["Orders"], "summary": "فهرست سفارش‌ها", "responses": { "200": { "description": "سفارش‌ها" } } },
+      "post": { "tags": ["Orders"], "summary": "ایجاد سفارش و پیش‌فاکتور", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateOrder" }, "example": { "shopId": 1, "fleetId": 101, "fleetPlate": "ایران ۱۲ · ۳۴۵ ب ۶۷", "fleetType": "کشنده", "paymentMode": "Installments", "installmentCount": 4, "items": [{ "productId": 1, "quantity": 1 }] } } } }, "responses": { "200": { "description": "سفارش ایجادشده" }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/orders/{id}": {
+      "get": { "tags": ["Orders"], "summary": "جزئیات سفارش", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "جزئیات سفارش" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+    },
+    "/api/store/orders/{id}/approve": {
+      "post": { "tags": ["Orders"], "summary": "تأیید سفارش توسط فروشنده (دمو)", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "سفارش تأیید شد" }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/orders/{id}/reject": {
+      "post": { "tags": ["Orders"], "summary": "رد سفارش توسط فروشنده (دمو)", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "سفارش رد شد" }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/orders/{id}/delivery-window": {
+      "post": { "tags": ["Orders"], "summary": "ثبت یا ویرایش بازه تحویل", "description": "تاریخ میلادی با قالب yyyy-MM-dd و ساعت شروع یکی از 8، 12، 16 یا 20؛ منطقه زمانی سرور تهران است.", "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeliveryWindow" }, "example": { "date": "2026-10-21", "startHour": 8 } } } }, "responses": { "200": { "description": "بازه ثبت شد" }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/orders/{id}/seller-deliver": {
+      "post": { "tags": ["Orders"], "summary": "ثبت تحویل توسط فروشنده با کد", "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SellerDelivery" }, "example": { "code": "7YZWH" } } } }, "responses": { "200": { "description": "در انتظار تأیید دریافت راننده" }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/orders/{id}/driver-confirm": {
+      "post": { "tags": ["Orders"], "summary": "تأیید تطابق کالا و دریافت توسط راننده", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "تحویل تأیید شد" }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/installments": {
+      "get": { "tags": ["Installments and payment"], "summary": "فهرست اقساط", "parameters": [{ "name": "orderId", "in": "query", "schema": { "type": "integer" } }], "responses": { "200": { "description": "اقساط" } } }
+    },
+    "/api/store/installments/{id}/payment": {
+      "post": { "tags": ["Installments and payment"], "summary": "شروع پرداخت قسط", "description": "آدرس checkout و نام provider را برمی‌گرداند. در Mock محلی صفحه شبیه‌ساز باز می‌شود؛ در حالت Toman کاربر به درگاه منتقل می‌شود.", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "شروع پرداخت", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentStart" } } } }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/store/payments/toman/callback": {
+      "post": { "tags": ["Installments and payment"], "summary": "Callback درگاه تومن", "description": "این endpoint را خود تومن با فرم ارسال می‌کند؛ برای تست عادی Postman استفاده نشود. پس از verify، کاربر به FrontendReturnUrl هدایت می‌شود.", "requestBody": { "required": true, "content": { "application/x-www-form-urlencoded": { "schema": { "type": "object", "required": ["uuid", "tracker_id", "amount", "status"], "properties": { "uuid": { "type": "string" }, "tracker_id": { "type": "string" }, "amount": { "type": "integer", "format": "int64", "description": "مبلغ به ریال" }, "status": { "type": "integer" } } } } } }, "responses": { "302": { "description": "Redirect به اپ بعد از بررسی callback" } } }
+    },
+    "/api/store/payments/mock/{trackerId}": {
+      "get": { "tags": ["Installments and payment"], "summary": "صفحه پرداخت آزمایشی", "parameters": [{ "name": "trackerId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "HTML شبیه‌ساز پرداخت" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+    },
+    "/api/store/payments/mock/{trackerId}/success": {
+      "post": { "tags": ["Installments and payment"], "summary": "شبیه‌سازی پرداخت موفق (فقط Development)", "parameters": [{ "name": "trackerId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "302": { "description": "بازگشت به اپ با نتیجه موفق" } } }
+    },
+    "/api/store/payments/mock/{trackerId}/fail": {
+      "post": { "tags": ["Installments and payment"], "summary": "شبیه‌سازی انصراف از پرداخت (فقط Development)", "parameters": [{ "name": "trackerId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "302": { "description": "بازگشت به اپ با نتیجه ناموفق" } } }
+    },
+    "/api/admin/credit/approve": {
+      "post": { "tags": ["Admin"], "summary": "تأیید درخواست اعتبار و تعیین سقف", "security": [{ "AdminApiKey": [] }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreditApprove" }, "example": { "limit": 150000000 } } } }, "responses": { "200": { "description": "اعتبار فعال‌شده" }, "401": { "description": "کلید ادمین نامعتبر" }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/admin/products": {
+      "get": { "tags": ["Admin"], "summary": "جستجو و صفحه‌بندی محصولات پنل", "security": [{ "AdminApiKey": [] }], "parameters": [
+        { "name": "q", "in": "query", "schema": { "type": "string" } },
+        { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+        { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 100 } }
+      ], "responses": { "200": { "description": "صفحه محصولات", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedProducts" } } } }, "401": { "description": "کلید ادمین نامعتبر" } } },
+      "post": { "tags": ["Admin"], "summary": "افزودن محصول", "security": [{ "AdminApiKey": [] }], "requestBody": { "$ref": "#/components/requestBodies/ProductInput" }, "responses": { "200": { "description": "محصول ساخته شد", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } }, "400": { "$ref": "#/components/responses/BadRequest" } } }
+    },
+    "/api/admin/products/{id}": {
+      "get": { "tags": ["Admin"], "summary": "جزئیات محصول", "security": [{ "AdminApiKey": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "محصول", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "put": { "tags": ["Admin"], "summary": "ویرایش محصول", "security": [{ "AdminApiKey": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "$ref": "#/components/requestBodies/ProductInput" }, "responses": { "200": { "description": "محصول ویرایش شد" }, "400": { "$ref": "#/components/responses/BadRequest" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "delete": { "tags": ["Admin"], "summary": "حذف محصول", "security": [{ "AdminApiKey": [] }], "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "204": { "description": "حذف شد" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+    }
+  },
+  "components": {
+    "securitySchemes": { "AdminApiKey": { "type": "apiKey", "in": "header", "name": "X-Admin-Key", "description": "در صورت تنظیم Admin:ApiKey لازم است. کلید واقعی را در فایل collection یا مخزن قرار ندهید." } },
+    "parameters": { "Id": { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } } },
+    "requestBodies": { "ProductInput": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductInput" }, "example": { "brand": "Giti", "model": "GSR 259", "size": "315/80R22.5", "width": 315, "profile": 80, "rim": "R22.5", "pattern": "گل عقب", "axlePosition": "محور عقب", "loadIndex": "156/150L", "noise": "", "year": 2026, "country": "چین", "warranty": "گارانتی فروشگاه", "warrantyMonths": 12, "price": 185000000, "stock": 20, "description": "توضیحات نمونه محصول", "images": [] } } } } },
+    "responses": {
+      "BadRequest": { "description": "ورودی نامعتبر یا وضعیت نامناسب", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+      "NotFound": { "description": "منبع پیدا نشد", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } }
+    },
+    "schemas": {
+      "Shop": { "type": "object", "properties": { "id": { "type": "integer" }, "name": { "type": "string" }, "address": { "type": "string" }, "productCount": { "type": "integer" } } },
+      "Product": { "allOf": [{ "$ref": "#/components/schemas/ProductInput" }, { "type": "object", "properties": { "id": { "type": "integer" }, "createdAt": { "type": "string", "format": "date-time" } } }] },
+      "ProductInput": { "type": "object", "required": ["brand", "model", "size", "price", "stock"], "properties": { "brand": { "type": "string" }, "model": { "type": "string" }, "size": { "type": "string" }, "width": { "type": "integer" }, "profile": { "type": "integer" }, "rim": { "type": "string" }, "pattern": { "type": "string" }, "axlePosition": { "type": "string" }, "loadIndex": { "type": "string" }, "noise": { "type": "string" }, "year": { "type": "integer" }, "country": { "type": "string" }, "warranty": { "type": "string" }, "warrantyMonths": { "type": "integer", "minimum": 0 }, "price": { "type": "number", "exclusiveMinimum": 0, "description": "قیمت هر جفت به تومان" }, "stock": { "type": "integer", "minimum": 0 }, "description": { "type": "string" }, "images": { "type": "array", "maxItems": 6, "items": { "type": "string", "description": "URL یا data URI عکس" } } } },
+      "PagedProducts": { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } }, "total": { "type": "integer" }, "page": { "type": "integer" }, "pageSize": { "type": "integer" } } },
+      "Credit": { "type": "object", "properties": { "limit": { "type": "number" }, "used": { "type": "number" }, "status": { "type": "string" }, "feeRate": { "type": "number" }, "installments": { "type": "integer" }, "firstPaymentAtPurchase": { "type": "boolean" }, "fleetId": { "type": "integer", "nullable": true }, "limitEnforced": { "type": "boolean" } } },
+      "CreditRequest": { "type": "object", "required": ["fleetId", "amount"], "properties": { "fleetId": { "type": "integer" }, "amount": { "type": "number", "description": "مبلغ درخواستی به تومان" } } },
+      "CreditApprove": { "type": "object", "required": ["limit"], "properties": { "limit": { "type": "number", "description": "سقف اعتبار به تومان" } } },
+      "OrderLine": { "type": "object", "required": ["productId", "quantity"], "properties": { "productId": { "type": "integer" }, "quantity": { "type": "integer", "minimum": 1, "description": "تعداد جفت" } } },
+      "QuoteRequest": { "type": "object", "required": ["items"], "properties": { "shopId": { "type": "integer" }, "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderLine" } }, "paymentMode": { "type": "string", "enum": ["Cash", "Installments"] }, "installmentCount": { "type": "integer", "enum": [2, 3, 4] } } },
+      "CreateOrder": { "allOf": [{ "$ref": "#/components/schemas/QuoteRequest" }, { "type": "object", "required": ["shopId", "fleetId"], "properties": { "fleetId": { "type": "integer" }, "fleetPlate": { "type": "string" }, "fleetType": { "type": "string" } } }] },
+      "Quote": { "type": "object", "properties": { "subtotal": { "type": "number" }, "fee": { "type": "number" }, "total": { "type": "number" }, "firstInstallment": { "type": "number" }, "nextInstallment": { "type": "number" }, "lastInstallment": { "type": "number" }, "installments": { "type": "integer" }, "firstPaymentAtPurchase": { "type": "boolean" }, "paymentMode": { "type": "string" } } },
+      "DeliveryWindow": { "type": "object", "required": ["date", "startHour"], "properties": { "date": { "type": "string", "format": "date", "example": "2026-10-21" }, "startHour": { "type": "integer", "enum": [8, 12, 16, 20] } } },
+      "SellerDelivery": { "type": "object", "required": ["code"], "properties": { "code": { "type": "string", "example": "7YZWH" } } },
+      "PaymentStart": { "type": "object", "properties": { "checkoutUrl": { "type": "string", "format": "uri" }, "provider": { "type": "string" } } }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+.slider-container {
+  direction: ltr;
+  width: 66%;
+}
+.slider .slick-slide div {
+  position: relative;
+  padding: 20px 0 50px;
+}
+
+.slider .slick-slide .check {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 25%;
+  width: 30%;
+  opacity: 0;
+  transition: all 0.2s ease-in-out;
+  z-index: 1;
+}
+.slick-next {
+  display: none !important;
+}
+.slider .slick-slide .avatar-shadow {
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+  left: 0;
+  height: 24px;
+  width: 100%;
+  opacity: 0;
+  transition: all 0.2s ease-in-out;
+}
+
+.slider .slick-slide .avatar {
+  border: 0px solid #000;
+  border-radius: 50%;
+  transition: all 0.2s ease-in-out;
+}
+
+.slider .slick-slide.slick-active.slick-current img {
+  opacity: 1;
+}
+
+.slider .slick-slide.slick-active.slick-current .avatar {
+  border-width: 2px;
+  transform: translateY(-12px);
+}

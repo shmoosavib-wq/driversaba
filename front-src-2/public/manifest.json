@@ -1,0 +1,33 @@
+{
+  "short_name": "SabaBar",
+  "name": "SabaBar",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "log512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+
+  "display": "standalone",
+  "theme_color": "#01ACBC",
+  "background_color": "#ffffff",
+  "dir": "rtl",
+  "lang": "fa",
+  "scope": "https://app.sababar.com",
+  "display_override": ["standalone", "fullscreen"],
+  "categories": ["business", "navigation", "travel", "utilities"]
+}

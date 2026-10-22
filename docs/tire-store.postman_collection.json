@@ -1,0 +1,69 @@
+{
+  "info": {
+    "name": "SabaBar Tire Store API",
+    "description": "مجموعه درخواست‌های API فروشگاه تایر. ابتدا API را روی localhost:5188 اجرا کنید. اعداد مبلغ به تومان هستند؛ callback تومن ورودی ریالی دارد و معمولاً توسط خود درگاه فراخوانی می‌شود. سفارش‌ها و اقساط فعلاً در حافظه‌اند. مقدار adminKey را فقط در محیط محلی Postman تنظیم کنید.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5188" },
+    { "key": "shopId", "value": "1" },
+    { "key": "productId", "value": "1" },
+    { "key": "orderId", "value": "1" },
+    { "key": "installmentId", "value": "1" },
+    { "key": "trackerId", "value": "replace-with-tracker-id" },
+    { "key": "adminKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [{ "name": "Health check", "request": { "method": "GET", "url": "{{baseUrl}}/health" } }]
+    },
+    {
+      "name": "Store and credit",
+      "item": [
+        { "name": "List shops", "request": { "method": "GET", "url": "{{baseUrl}}/api/store/shops" } },
+        { "name": "List products", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/store/products?shopId={{shopId}}", "host": ["{{baseUrl}}"], "path": ["api", "store", "products"], "query": [{ "key": "shopId", "value": "{{shopId}}" }] } } },
+        { "name": "Search products", "request": { "method": "GET", "url": "{{baseUrl}}/api/store/products?shopId={{shopId}}&q=Giti" } },
+        { "name": "Get credit", "request": { "method": "GET", "url": "{{baseUrl}}/api/store/credit" } },
+        { "name": "Request credit", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"fleetId\": 101,\n  \"amount\": 100000000\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/store/credit/request" } }
+      ]
+    },
+    {
+      "name": "Orders and delivery",
+      "item": [
+        { "name": "Quote - installments", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"shopId\": {{shopId}},\n  \"paymentMode\": \"Installments\",\n  \"installmentCount\": 4,\n  \"items\": [{ \"productId\": {{productId}}, \"quantity\": 1 }]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/store/orders/quote" } },
+        { "name": "Quote - cash", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"shopId\": {{shopId}},\n  \"paymentMode\": \"Cash\",\n  \"items\": [{ \"productId\": {{productId}}, \"quantity\": 1 }]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/store/orders/quote" } },
+        { "name": "Create order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"shopId\": {{shopId}},\n  \"fleetId\": 101,\n  \"fleetPlate\": \"ایران ۱۲ · ۳۴۵ ب ۶۷\",\n  \"fleetType\": \"کشنده\",\n  \"paymentMode\": \"Installments\",\n  \"installmentCount\": 4,\n  \"items\": [{ \"productId\": {{productId}}, \"quantity\": 1 }]\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/store/orders" } },
+        { "name": "List orders", "request": { "method": "GET", "url": "{{baseUrl}}/api/store/orders" } },
+        { "name": "Get order", "request": { "method": "GET", "url": "{{baseUrl}}/api/store/orders/{{orderId}}" } },
+        { "name": "Approve order (demo seller)", "request": { "method": "POST", "url": "{{baseUrl}}/api/store/orders/{{orderId}}/approve" } },
+        { "name": "Reject order (demo seller)", "request": { "method": "POST", "url": "{{baseUrl}}/api/store/orders/{{orderId}}/reject" } },
+        { "name": "Set delivery window", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"date\": \"2026-10-21\",\n  \"startHour\": 8\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/store/orders/{{orderId}}/delivery-window" } },
+        { "name": "Seller marks delivered using code", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"code\": \"7YZWH\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/store/orders/{{orderId}}/seller-deliver" } },
+        { "name": "Driver confirms item and receipt", "request": { "method": "POST", "url": "{{baseUrl}}/api/store/orders/{{orderId}}/driver-confirm" } }
+      ]
+    },
+    {
+      "name": "Installments and payment",
+      "item": [
+        { "name": "List installments", "request": { "method": "GET", "url": "{{baseUrl}}/api/store/installments" } },
+        { "name": "List installments for order", "request": { "method": "GET", "url": "{{baseUrl}}/api/store/installments?orderId={{orderId}}" } },
+        { "name": "Start installment payment", "request": { "method": "POST", "url": "{{baseUrl}}/api/store/installments/{{installmentId}}/payment" } },
+        { "name": "Open mock checkout page (Development only)", "request": { "method": "GET", "url": "{{baseUrl}}/api/store/payments/mock/{{trackerId}}" } },
+        { "name": "Mock payment success (Development only)", "request": { "method": "POST", "url": "{{baseUrl}}/api/store/payments/mock/{{trackerId}}/success" } },
+        { "name": "Mock payment failure (Development only)", "request": { "method": "POST", "url": "{{baseUrl}}/api/store/payments/mock/{{trackerId}}/fail" } }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        { "name": "Approve credit and set limit", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-Admin-Key", "value": "{{adminKey}}" }], "body": { "mode": "raw", "raw": "{\n  \"limit\": 150000000\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/admin/credit/approve" } },
+        { "name": "List products with pagination", "request": { "method": "GET", "header": [{ "key": "X-Admin-Key", "value": "{{adminKey}}" }], "url": "{{baseUrl}}/api/admin/products?q=&page=1&pageSize=10" } },
+        { "name": "Get product", "request": { "method": "GET", "header": [{ "key": "X-Admin-Key", "value": "{{adminKey}}" }], "url": "{{baseUrl}}/api/admin/products/{{productId}}" } },
+        { "name": "Create product", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-Admin-Key", "value": "{{adminKey}}" }], "body": { "mode": "raw", "raw": "{\n  \"brand\": \"Giti\",\n  \"model\": \"GSR 259\",\n  \"size\": \"315/80R22.5\",\n  \"width\": 315,\n  \"profile\": 80,\n  \"rim\": \"R22.5\",\n  \"pattern\": \"گل عقب\",\n  \"axlePosition\": \"محور عقب\",\n  \"loadIndex\": \"156/150L\",\n  \"noise\": \"\",\n  \"year\": 2026,\n  \"country\": \"چین\",\n  \"warranty\": \"گارانتی فروشگاه\",\n  \"warrantyMonths\": 12,\n  \"price\": 185000000,\n  \"stock\": 20,\n  \"description\": \"توضیحات نمونه محصول\",\n  \"images\": []\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/admin/products" } },
+        { "name": "Update product", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-Admin-Key", "value": "{{adminKey}}" }], "body": { "mode": "raw", "raw": "{\n  \"brand\": \"Giti\",\n  \"model\": \"GSR 259\",\n  \"size\": \"315/80R22.5\",\n  \"width\": 315,\n  \"profile\": 80,\n  \"rim\": \"R22.5\",\n  \"pattern\": \"گل عقب\",\n  \"axlePosition\": \"محور عقب\",\n  \"loadIndex\": \"156/150L\",\n  \"noise\": \"\",\n  \"year\": 2026,\n  \"country\": \"چین\",\n  \"warranty\": \"گارانتی فروشگاه\",\n  \"warrantyMonths\": 12,\n  \"price\": 185000000,\n  \"stock\": 20,\n  \"description\": \"توضیحات نمونه محصول\",\n  \"images\": []\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/admin/products/{{productId}}" } },
+        { "name": "Delete product", "request": { "method": "DELETE", "header": [{ "key": "X-Admin-Key", "value": "{{adminKey}}" }], "url": "{{baseUrl}}/api/admin/products/{{productId}}" } }
+      ]
+    }
+  ]
+}

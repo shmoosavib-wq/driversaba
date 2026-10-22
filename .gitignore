@@ -1,0 +1,36 @@
+# Local credentials and machine-specific configuration
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+**/appsettings.*.local.json
+
+# Dependencies and generated output
+**/node_modules/
+**/build/
+**/dist/
+**/coverage/
+**/bin/
+**/obj/
+**/*.tsbuildinfo
+**/*.log
+**/*.db
+**/*.db-*
+**/App_Data/
+**/.verify/
+**/_validation/
+**/_verify-build/
+**/_buildcheck/
+**/_authbuild/
+**/_auth-smoke/
+
+# Local archives, audits, and handoff snapshots
+*.zip
+/_audit_*/
+/2026-10-17/
+/handoff/
+
+# Editor and OS files
+**/.idea/
+**/.vscode/
+**/.DS_Store

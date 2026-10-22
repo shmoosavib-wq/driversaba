@@ -1,0 +1,2 @@
+echo "checking types..."
+npm run type:check

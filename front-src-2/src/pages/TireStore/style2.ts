@@ -1,0 +1,17 @@
+import styled from "styled-components";
+
+export const Section = styled.section`margin:0 16px 14px;background:#fff;border:1px solid #e4eaed;border-radius:18px;padding:14px;display:grid;gap:10px;box-shadow:0 8px 18px #22303808;& h3{margin:0;font-size:13px}& small{color:#7a8a94;font-size:10px;line-height:1.9}`;
+export const Row = styled.div`display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;& small{font-size:10px;color:#7a8a94}`;
+export const Gauge = styled.div<{ $pct: number }>`width:150px;height:150px;border-radius:50%;margin:6px auto;display:grid;place-items:center;background:conic-gradient(#01acbc ${({ $pct }) => $pct * 3.6}deg,#e4eaed 0);& div{width:116px;height:116px;border-radius:50%;background:#fff;display:grid;place-items:center;text-align:center;font-size:10px;color:#7a8a94}& strong{display:block;font-size:17px;color:#223038}`;
+export const Cta = styled.button`margin:0 16px 12px;width:calc(100% - 32px);height:48px;border:0;border-radius:14px;background:#01acbc;color:#fff;font-family:inherit;font-size:14px;font-weight:900;&:disabled{background:#c5d3d6}`;
+export const Pill = styled.span<{ $ok?: boolean }>`font-size:10px;padding:3px 9px;border-radius:99px;background:${({ $ok }) => ($ok ? "#e3f8ea" : "#fff2dd")};color:${({ $ok }) => ($ok ? "#18864a" : "#b9770e")}`;
+export const Chip = styled.span`font-size:10px;padding:4px 10px;border-radius:99px;background:#effafa;color:#008c9a`;
+export const Stepper = styled.div`display:flex;align-items:center;gap:10px;& button{width:30px;height:30px;border-radius:10px;border:1px solid #01acbc;background:#fff;color:#01acbc;font-size:18px;font-family:inherit}& b{min-width:18px;text-align:center}`;
+export const Sheet = styled.div`position:fixed;inset:0;background:#0008;z-index:20;display:flex;align-items:flex-end;direction:rtl`;
+export const SheetBody = styled.div`background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px 24px;display:grid;gap:10px;max-height:88dvh;overflow:auto;& h3{margin:0;font-size:15px}& p{margin:0;font-size:11px;line-height:2;color:#7a8a94}`;
+export const Option = styled.button<{ $active: boolean }>`display:flex;justify-content:space-between;align-items:center;text-align:right;border:1px solid ${({ $active }) => ($active ? "#01acbc" : "#e4eaed")};background:${({ $active }) => ($active ? "#effafa" : "#fff")};border-radius:14px;padding:12px;font-family:inherit;font-size:12px;color:#223038`;
+export const Split = styled.div<{ $a: number }>`height:10px;border-radius:99px;overflow:hidden;background:#ffb64d;& i{display:block;height:100%;width:${({ $a }) => $a}%;background:#01acbc}`;
+export const Code = styled.div`font-size:30px;font-weight:900;letter-spacing:4px;text-align:center;color:#008c9a;direction:ltr;padding:16px;border:2px dashed #01acbc;border-radius:16px;background:#effafa`;
+export const Check = styled.label`display:flex;gap:8px;align-items:flex-start;font-size:11px;line-height:1.9;margin:0 16px 12px`;
+export const Banner = styled.button`margin:0 16px 14px;width:calc(100% - 32px);text-align:right;border:1px solid #ffd79a;background:#fff7e8;border-radius:16px;padding:12px;font-family:inherit;font-size:12px;color:#8a5a0c`;
+export const Media = styled.div`height:190px;margin:0 16px 12px;border-radius:22px;background:#effafb;display:grid;place-items:center;font-size:90px;overflow:hidden;& img{width:100%;height:100%;object-fit:cover}`;

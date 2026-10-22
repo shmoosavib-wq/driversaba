@@ -1,0 +1,26 @@
+.icon-style::before {
+  background-color: #01acbc !important;
+  color: #ffffff !important;
+  width: 25px !important;
+  height: 25px !important;
+  border-radius: 50%;
+  border: 1px solid #01acbc !important;
+  box-sizing: border-box;
+  top: 0 !important;
+  left: 0 !important;
+}
+.icon-style {
+  border-radius: 48px;
+  color: #ffffff !important;
+  position: relative;
+  margin-left: 0px !important;
+}
+.icon-style > span {
+  color: #000000 !important;
+  position: absolute;
+}
+
+.icon-style > span::before {
+  color: #ffffff !important;
+  position: absolute;
+}
