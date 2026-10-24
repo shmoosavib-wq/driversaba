@@ -16,7 +16,7 @@ public sealed class CreditService(ICreditRepository credits, PricingOptions pric
     public CreditDto Get()
     {
         var credit = credits.Get();
-        return new CreditDto(credit.Limit, credit.Used, credit.Status, pricing.FeeRate, pricing.Installments, true, credits.GetRequest()?.FleetId, pricing.EnforceCreditLimit);
+        return new CreditDto(credit.Limit, credit.Used, credit.Status, pricing.FeeRate, pricing.Installments, true, credits.GetRequest()?.FleetId, true);
     }
 
     public CreditDto Approve(CreditApproveInput input)

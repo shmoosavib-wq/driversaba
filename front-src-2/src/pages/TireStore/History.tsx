@@ -48,6 +48,7 @@ export function History({ orders, installments, shops, onOpen }: Props) {
                 ))}
               </InvTable>
               <InvSum><span>جمع کالا</span><span>{toman(order.subtotal)} تومان</span></InvSum>
+              {order.downPayment ? <InvSum><span>مازاد اعتبار · در پرداخت اول</span><span>{toman(order.downPayment)} تومان</span></InvSum> : null}
               {order.fee > 0 && <InvSum><span>کارمزد اقساط</span><span>{toman(order.fee)} تومان</span></InvSum>}
               <InvSum $big><span>مبلغ کل فاکتور</span><span>{toman(order.total)} تومان</span></InvSum>
               {payments.length > 0 && <>

@@ -2,6 +2,16 @@ export const toman = (n: number) => Math.round(n).toLocaleString("fa-IR");
 export const fa = (n: number) => n.toLocaleString("fa-IR");
 export const installmentAmount = (price: number, count: number, feeRate: number) =>
   Math.ceil((price * (1 + feeRate)) / count);
+export const installmentBreakdown = (subtotal: number, count: number, feeRate: number, availableCredit?: number) => {
+  const financedPrincipal = Math.min(subtotal, Math.max(0, availableCredit ?? subtotal));
+  const downPayment = subtotal - financedPrincipal;
+  const total = subtotal + Math.round(financedPrincipal * feeRate);
+  const scheduleTotal = total - downPayment;
+  const scheduledFirst = Math.ceil(scheduleTotal / Math.max(1, count));
+  const first = downPayment + scheduledFirst;
+  const next = count > 1 ? Math.round((scheduleTotal - scheduledFirst) / (count - 1)) : 0;
+  return { downPayment, first, next };
+};
 export const fleetId = (fleet: any) => fleet?.TransportEquipmentId || fleet?.EquipmentId || fleet?.Id || fleet?.id || 0;
 export const fleetName = (fleet: any) => fleet?.VehicleType?.label || fleet?.VehicleType || fleet?.EquipmentType || fleet?.Name || "ناوگان صبابار";
 export const fleetPlate = (fleet: any) => fleet?.PlateNumber || fleet?.LicensePlate || fleet?.EquipmentSmartNumber || fleet?.SmartNumber || "پلاک ثبت‌شده";

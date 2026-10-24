@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+*.user
+*.suo
+*.log
+*.db
+*.db-shm
+*.db-wal
+/src/TireStore.Api/App_Data/*.db*
+/.verify/
+/_auth-smoke/
+/_authbuild/
+/_buildcheck/
+/_validation/
+/_verify-build/

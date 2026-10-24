@@ -59,19 +59,23 @@ export interface StoreSummary {
   productCount: number;
 }
 export interface ManagedStore extends StoreSummary { contactPhone: string; isActive: boolean; }
+export interface StoreInstallmentPlan { storeId: number; installmentCount: 2 | 4; feeRate: number; isActive: boolean; updatedAt: string; }
+export interface StoreInstallmentPlanInput { installmentCount: 2 | 4; feeRate: number; isActive: boolean; }
 export interface StoreUser { membershipId: number; userId: string; storeId: number; username: string; displayName: string; roleCode: string; roleName: string; isActive: boolean; createdAt: string; }
 export interface StoreRole { code: string; name: string; }
 
 export interface StoreOrder {
   id: number;
   shopId: number;
-  fleetId: number;
-  fleetPlate?: string;
-  fleetType?: string;
+  fleetId?: number | null;
+  fleetPlate?: string | null;
+  fleetType?: string | null;
   items: { productId: number; title: string; size: string; quantity: number; unitPrice: number }[];
   subtotal: number;
   fee: number;
   total: number;
+  downPayment?: number;
+  financedPrincipal?: number;
   paymentMode?: string;
   installmentCount?: number;
   status: string;
@@ -133,6 +137,12 @@ export const storesApi = {
   roles: () => request<StoreRole[]>('/api/admin/access/roles'),
   createUser: (input: { username: string; displayName: string; storeId: number; roleCode: string }) => request<{ user: StoreUser; temporaryPassword: string }>('/api/admin/access/users', { method: 'POST', body: JSON.stringify(input) }),
   setUserActive: (membershipId: number, isActive: boolean) => request<void>(`/api/admin/access/users/${membershipId}/active`, { method: 'PUT', body: JSON.stringify({ isActive }) }),
+};
+
+export const installmentPlansApi = {
+  forStore: (storeId: number) => request<StoreInstallmentPlan[]>(`/api/admin/installment-plans?shopId=${storeId}`),
+  saveForStore: (storeId: number, plans: StoreInstallmentPlanInput[]) =>
+    request<StoreInstallmentPlan[]>(`/api/admin/installment-plans/${storeId}`, { method: 'PUT', body: JSON.stringify({ plans }) }),
 };
 
 export const ordersApi = {

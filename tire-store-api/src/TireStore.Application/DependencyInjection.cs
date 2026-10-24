@@ -3,6 +3,7 @@ using TireStore.Application.Credits;
 using TireStore.Application.Orders;
 using TireStore.Application.Payments;
 using TireStore.Application.Products;
+using TireStore.Application.InstallmentPlans;
 
 namespace TireStore.Application;
 
@@ -16,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<OrderService>();
         services.AddScoped<PaymentService>();
         services.AddScoped<CreditService>();
+        services.AddScoped<InstallmentPlanService>();
         return services;
     }
 }

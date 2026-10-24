@@ -167,6 +167,9 @@ public sealed class AdminAccessStore(IDbContextFactory<StoreDatabase> databaseFa
         var store = new StoreRow { Name = name, Address = address, ContactPhone = contactPhone, IsActive = true };
         db.Stores.Add(store);
         db.SaveChanges();
+        db.StoreInstallmentPlans.AddRange(
+            new StoreInstallmentPlan { StoreId = store.Id, InstallmentCount = 2, FeeRate = 0.07m, IsActive = false, UpdatedBy = actorUserId },
+            new StoreInstallmentPlan { StoreId = store.Id, InstallmentCount = 4, FeeRate = 0.07m, IsActive = true, UpdatedBy = actorUserId });
         AddAudit(db, actorUserId, "platform.store.create", "store", store.Id.ToString());
         db.SaveChanges();
         transaction.Commit();

@@ -68,6 +68,7 @@ function DeliverySummary({ order, shopName, shopAddress }: { order: TireOrder; s
         <summary>مشاهده‌ی مبلغ و جزئیات پرداخت</summary>
         <div className="rows">
           <Row><span>جمع کالا</span><b>{toman(order.subtotal)} تومان</b></Row>
+          {order.downPayment ? <Row><span>مازاد اعتبار · در پرداخت اول</span><b>{toman(order.downPayment)} تومان</b></Row> : null}
           {order.fee > 0 && <Row><span>کارمزد اقساط</span><b>{toman(order.fee)} تومان</b></Row>}
           <Row><span>مبلغ کل خرید</span><b>{toman(order.total)} تومان</b></Row>
           <Row><span>روش پرداخت</span><b>{order.paymentMode === "Cash" ? "نقدی" : `اقساطی · ${order.installmentCount || 4} قسط`}</b></Row>
@@ -125,7 +126,7 @@ export function Proforma({ order, shopName, onPay }: { order: TireOrder; shopNam
         <small>فروشنده پیش‌فاکتور را تأیید کرد. برای نهایی‌شدن خرید، {order.paymentMode === "Cash" ? "مبلغ خرید را کامل پرداخت کن" : `قسط اول از ${order.installmentCount || 4} قسط را پرداخت کن`}؛ بازه‌ی تحویل را بعد از پرداخت مشخص می‌کنی.</small>
       </Section>
       <ProformaInvoice order={order} title="پیش‌فاکتور تاییدشده" shopName={shopName} />
-      <Cta onClick={onPay}>{order.paymentMode === "Cash" ? "پرداخت کامل خرید" : "پرداخت قسط اول"}</Cta>
+      <Cta onClick={onPay}>پرداخت</Cta>
     </>
   );
 }
@@ -156,7 +157,7 @@ export function DeliveryCode({ order, shopName, shopAddress, saving, onWindow, o
   const rangeOk = !!day && (day.year > minimumDate.year || day.year === minimumDate.year && (day.month > minimumDate.month || day.month === minimumDate.month && day.day >= minimumDate.day));
   const hasWindow = !!current;
   const awaitingDriver = order.status === "AwaitingDriverConfirm";
-  const fullyPaid = installments.length > 0 && installments.every((installment) => installment.status === "Paid");
+  const fullyPaid = order.paymentMode === "Installments" && installments.length > 0 && installments.every((installment) => installment.status === "Paid");
   const copy = () => {
     navigator.clipboard?.writeText(order.deliveryCode || "").then(() => toaster.positive("کد کپی شد."), () => toaster.negative("کپی انجام نشد."));
   };

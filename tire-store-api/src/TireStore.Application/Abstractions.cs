@@ -35,6 +35,12 @@ public interface IShopRepository
     bool HasProduct(int shopId, int productId);
 }
 
+public interface IInstallmentPlanRepository
+{
+    IReadOnlyList<StoreInstallmentPlan> GetForStore(int storeId, bool activeOnly = false);
+    void SaveForStore(int storeId, IReadOnlyList<StoreInstallmentPlan> plans, string actorUserId);
+}
+
 public interface ICreditRepository
 {
     Credit Get();

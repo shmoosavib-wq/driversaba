@@ -24,9 +24,10 @@ export function ProformaInvoice({ order, title, shopName, shopAddress, foot }: {
         ))}
       </InvTable>
       <InvSum><span>جمع کالا</span><span>{toman(order.subtotal)} تومان</span></InvSum>
+      {order.downPayment ? <InvSum><span>مازاد اعتبار · در پرداخت اول</span><span>{toman(order.downPayment)} تومان</span></InvSum> : null}
       {order.fee > 0 && <InvSum><span>کارمزد اقساط</span><span>{toman(order.fee)} تومان</span></InvSum>}
       <InvSum $big><span>مبلغ قابل پرداخت</span><span>{toman(order.total)} تومان</span></InvSum>
-      <InvFoot>{foot || (order.paymentMode === "Cash" ? "پرداخت نقدی پس از تأیید پیش‌فاکتور فروشنده انجام می‌شود." : `پرداخت اقساطی در ${order.installmentCount || 4} مرحله انجام می‌شود؛ قسط اول پس از تأیید فروشنده قابل پرداخت است.`)}</InvFoot>
+      <InvFoot>{foot || (order.paymentMode === "Cash" ? "پرداخت نقدی پس از تأیید پیش‌فاکتور فروشنده انجام می‌شود." : `پرداخت اقساطی در ${order.installmentCount || 4} مرحله انجام می‌شود؛ قسط اول${order.downPayment ? ` شامل ${toman(order.downPayment)} تومان مازاد اعتبار است و` : ""} پس از تأیید فروشنده قابل پرداخت است.`)}</InvFoot>
     </Invoice>
   );
 }

@@ -6,6 +6,7 @@ using TireStore.Application.Credits;
 using TireStore.Application.Orders;
 using TireStore.Application.Payments;
 using TireStore.Application.Products;
+using TireStore.Application.InstallmentPlans;
 using TireStore.Api.Modules;
 using TireStore.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -196,6 +197,7 @@ store.MapGet("/capabilities", () => Results.Ok(new { commerceEnabled = app.Envir
 store.MapGet("/shops", (IShopRepository shops) => shops.GetAll());
 store.MapGet("/products", (ProductService svc, int? shopId, string? q) =>
     svc.List(new ProductQuery(q, shopId)));
+store.MapGet("/installment-plans", (InstallmentPlanService service, int shopId) => service.GetForStore(shopId, activeOnly: true));
 store.AllowAnonymous();
 
 if (app.Environment.IsDevelopment())
@@ -257,6 +259,14 @@ admin.MapDelete("/products/{id:int}", (ProductService svc, int id, int shopId) =
     svc.Delete(id, shopId);
     return Results.NoContent();
 }).RequireStorePermission("catalog.products.delete");
+
+admin.MapGet("/installment-plans", (InstallmentPlanService service, int shopId) => service.GetForStore(shopId))
+    .RequirePlatformPermission("platform.installment-plans.manage");
+admin.MapPut("/installment-plans/{storeId:int}", (InstallmentPlanService service, int storeId, SaveInstallmentPlansInput input, ClaimsPrincipal user) =>
+{
+    var actorId = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+    return Results.Ok(service.SaveForStore(storeId, input, actorId));
+}).RequirePlatformPermission("platform.installment-plans.manage");
 
 var accessAdmin = admin.MapGroup("/access");
 accessAdmin.MapGet("/stores", (AdminAccessService service) => service.GetStores())

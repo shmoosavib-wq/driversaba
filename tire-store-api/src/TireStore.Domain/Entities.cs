@@ -43,6 +43,16 @@ public sealed class ProductBrand
 
 public sealed record Shop(int Id, string Name, string Address, int ProductCount);
 
+public sealed class StoreInstallmentPlan
+{
+    public int StoreId { get; set; }
+    public int InstallmentCount { get; set; }
+    public decimal FeeRate { get; set; }
+    public bool IsActive { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public string UpdatedBy { get; set; } = "";
+}
+
 public sealed record Credit(decimal Limit, decimal Used, string Status);
 
 public sealed record CreditRequestState(int FleetId, decimal Amount, string Status, DateTimeOffset CreatedAt);
@@ -63,13 +73,15 @@ public sealed class Order
 {
     public int Id { get; init; }
     public int ShopId { get; init; }
-    public int FleetId { get; init; }
+    public int? FleetId { get; init; }
     public string FleetPlate { get; init; } = "";
     public string FleetType { get; init; } = "";
     public List<OrderItem> Items { get; init; } = new();
     public decimal Subtotal { get; init; }
     public decimal Fee { get; init; }
     public decimal Total { get; init; }
+    public decimal DownPayment { get; init; }
+    public decimal FinancedPrincipal { get; init; }
     public string PaymentMode { get; init; } = "Installments";
     public int InstallmentCount { get; init; } = 4;
     public string Status { get; set; } = OrderStatus.AwaitingFirstPayment;

@@ -6,7 +6,7 @@ import { getFleetsInfo } from "@/services/equipment/equipment-api";
 import { fleetId, fleetName, fleetPlate } from "./helpers";
 import {
   approveTireCredit, createTireOrder, driverConfirmTireOrder, getTireCredit, getTireInstallments, getTireOrder, getTireOrders, getTireProducts, getTireShops, getTireStoreCapabilities,
-  startTirePayment, quoteTireOrder, requestTireCredit, setTireDeliveryWindow, PaymentMode, TireInstallment, TireOrder, TireProduct,
+  startTirePayment, quoteTireOrder, requestTireCredit, setTireDeliveryWindow, PaymentMode, TireInstallment, TireOrder, TireProduct, getTireInstallmentPlans,
 } from "@/services/tire-store-api";
 
 import { useTireCart } from "./hooks/useTireCart";
@@ -44,20 +44,29 @@ export default function TireStore() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("Installments");
   const [installmentCount, setInstallmentCount] = useState(4);
-  const [selectedCashFleetId, setSelectedCashFleetId] = useState(0);
 
   const capabilities = useQuery("TIRE_STORE_CAPABILITIES", getTireStoreCapabilities, { staleTime: Infinity });
   const commerceEnabled = capabilities.data?.commerceEnabled ?? process.env.NODE_ENV === "development";
   const fleets = useQuery(["TIRE_FLEETS"], getFleetsInfo, { enabled: commerceEnabled });
   const shops = useQuery("TIRE_SHOPS", getTireShops);
   const products = useQuery(["TIRE_PRODUCTS", shopId], () => getTireProducts(shopId), { refetchInterval: 15000 });
+  const installmentPlansQuery = useQuery(["TIRE_INSTALLMENT_PLANS", shopId], () => getTireInstallmentPlans(shopId), { enabled: commerceEnabled });
   const credit = useQuery("TIRE_CREDIT", getTireCredit, { enabled: commerceEnabled, refetchInterval: (data) => (data?.status === "Pending" ? 5000 : false) });
   const orders = useQuery("TIRE_ORDERS", getTireOrders, { enabled: commerceEnabled, refetchInterval: commerceEnabled ? 5000 : false });
   const order = useQuery(["TIRE_ORDER", orderId], () => getTireOrder(orderId), { enabled: commerceEnabled && orderId > 0, refetchInterval: view === "awaiting" ? 4000 : false });
   const installments = useQuery(["TIRE_INSTALLMENTS"], () => getTireInstallments(), { enabled: commerceEnabled && (view === "installments" || view === "history" || view === "awaiting") });
 
   const { cart, items, lines, setCart, changeQty } = useTireCart(products.data);
-  const quote = useQuery(["TIRE_QUOTE", shopId, items, paymentMode, installmentCount], () => quoteTireOrder(items, shopId, paymentMode, installmentCount), { enabled: commerceEnabled && items.length > 0 });
+  const approved = credit.data?.status === "Approved";
+  const availableCredit = approved ? Math.max(0, credit.data.limit - credit.data.used) : 0;
+  const canInstallments = approved && availableCredit > 0;
+  const installmentPlans = installmentPlansQuery.data || [];
+  const activeInstallmentPlans = installmentPlans.filter((plan) => plan.isActive);
+  const selectedPlan = activeInstallmentPlans.find((plan) => plan.installmentCount === installmentCount) || activeInstallmentPlans[0];
+  const effectiveInstallmentCount = selectedPlan?.installmentCount ?? installmentCount;
+  const effectivePaymentMode: PaymentMode = paymentMode === "Installments" && activeInstallmentPlans.length === 0 ? "Cash" : paymentMode;
+  const installmentUnavailableReason = activeInstallmentPlans.length === 0 ? "در این فروشگاه روش اقساطی فعالی وجود ندارد." : undefined;
+  const quote = useQuery(["TIRE_QUOTE", shopId, items, effectivePaymentMode, effectiveInstallmentCount, availableCredit], () => quoteTireOrder(items, shopId, effectivePaymentMode, effectiveInstallmentCount), { enabled: commerceEnabled && items.length > 0 && credit.isFetched && installmentPlansQuery.isFetched });
   const allProducts = products.data || [];
 
   const MOCK_FLEETS = [
@@ -68,9 +77,9 @@ export default function TireStore() {
   const fleetList = useMock ? MOCK_FLEETS : Array.isArray(fleets.data) ? fleets.data : [];
 
 
-  const selectedFleet = fleetList.find((fleet: any) => fleetId(fleet) === credit.data?.fleetId)
-    || fleetList.find((fleet: any) => fleetId(fleet) === selectedCashFleetId);
-  const approved = credit.data?.status === "Approved";
+  const selectedFleet = effectivePaymentMode === "Installments"
+    ? fleetList.find((fleet: any) => fleetId(fleet) === credit.data?.fleetId)
+    : undefined;
   const activeOrder = commerceEnabled ? (orders.data || []).find((o) => ["AwaitingSellerApproval", "AwaitingFirstPayment", "Approved", "AwaitingDriverConfirm"].includes(o.status)) : undefined;
 
   const go = (next: View) => { setHistory((h) => [...h, view]); setView(next); };
@@ -88,9 +97,10 @@ export default function TireStore() {
     onError: fail,
   });
   const createOrder = useMutation(() => {
+    if (effectivePaymentMode === "Installments" && !canInstallments) return Promise.reject(new Error("اعتبار کافی برای پرداخت اقساطی ندارید؛ روش نقدی را انتخاب کنید یا ابتدا اعتبار بگیرید."));
 
-    if (!selectedFleet) return Promise.reject(new Error("ناوگان دریافت سفارش را انتخاب کن."));
-    return createTireOrder(shopId, fleetId(selectedFleet), items, fleetPlate(selectedFleet), fleetName(selectedFleet), paymentMode, installmentCount);
+    if (effectivePaymentMode === "Installments" && !selectedFleet) return Promise.reject(new Error("ناوگان متصل به اعتبار پیدا نشد."));
+    return createTireOrder(shopId, selectedFleet ? fleetId(selectedFleet) : 0, items, selectedFleet ? fleetPlate(selectedFleet) : null, selectedFleet ? fleetName(selectedFleet) : null, effectivePaymentMode, effectiveInstallmentCount);
   }, {
     onSuccess: (created) => {
       setOrderId(created.id);
@@ -114,14 +124,12 @@ export default function TireStore() {
   const openStore = () => go("shops");
   const startCheckout = () => {
     if (!commerceEnabled) { toaster.info("در این مرحله فقط مشاهده‌ی محصولات و قیمت‌ها فعال است."); return; }
-    if (paymentMode === "Installments" && activeOrder?.paymentMode === "Installments") {
+    if (effectivePaymentMode === "Installments" && activeOrder?.paymentMode === "Installments") {
       toaster.info("یک خرید قسطی در جریان داری؛ ابتدا وضعیت همان سفارش را پیگیری کن.");
       setOrderId(activeOrder.id);
       go("awaiting");
       return;
     }
-    if (paymentMode === "Installments" && !approved) { toaster.info("برای خرید اقساطی، ابتدا اعتبارت را فعال کن."); setSheet(true); return; }
-    if (!selectedFleet) { toaster.info("برای ثبت سفارش، ناوگان دریافت و پلاک را انتخاب کن."); return; }
     if (items.length === 0) { toaster.info("سبد خرید خالی است."); return; }
     go("confirm");
   };
@@ -170,7 +178,7 @@ export default function TireStore() {
   const status = order.data?.status;
   const effective: View = view === "awaiting" && status === "AwaitingFirstPayment" ? "proforma" : view === "awaiting" && (status === "Approved" || status === "AwaitingDriverConfirm" || status === "Delivered") ? "code" : view === "awaiting" && status === "Rejected" ? "rejected" : view;
   const orderInstallments = installments.data?.filter((i) => i.orderId === order.data?.id) || [];
-  const fullyPaid = orderInstallments.length > 0 && orderInstallments.every((i) => i.status === "Paid");
+  const fullyPaid = order.data?.paymentMode !== "Cash" && orderInstallments.length > 0 && orderInstallments.every((i) => i.status === "Paid");
   const screenTitle = !commerceEnabled && effective === "home" ? "فروشگاه تایر" : effective === "code" && fullyPaid ? "خلاصه خرید" : effective === "code" && status === "Delivered" ? "وضعیت سفارش" : TITLES[effective];
   const limit = credit.data?.limit || 0;
   const used = credit.data?.used || 0;
@@ -184,11 +192,11 @@ export default function TireStore() {
       )}
       {effective === "shops" && <Shops shops={shops.data || []} onPick={(id) => { setShopId(id); setCart({}); go("catalog"); }} />}
       {effective === "catalog" && (
-          <Catalog commerceEnabled={commerceEnabled} shop={(shops.data || []).find((s) => s.id === shopId)} products={allProducts} cart={cart} remaining={paymentMode === "Installments" && approved && credit.data?.limitEnforced !== false ? limit - used : undefined} total={quote.data?.total || 0} paymentMode={paymentMode} installmentCount={installmentCount} feeRate={credit.data?.feeRate || 0} onPaymentPlan={(mode, count) => { setPaymentMode(mode); setInstallmentCount(count); }} fleets={fleetList.map((fleet: any) => ({ id: fleetId(fleet), name: fleetName(fleet), plate: fleetPlate(fleet) }))} selectedFleetId={selectedFleet ? fleetId(selectedFleet) : 0} onFleetChange={setSelectedCashFleetId}
+          <Catalog commerceEnabled={commerceEnabled} shop={(shops.data || []).find((s) => s.id === shopId)} products={allProducts} cart={cart} remaining={availableCredit} canInstallments={canInstallments} installmentPlans={activeInstallmentPlans} installmentCount={effectiveInstallmentCount} feeRate={selectedPlan?.feeRate || 0} onInstallmentCount={(count) => setInstallmentCount(count)}
           onQty={changeQty} onOpen={(p) => { setDetail(p); go("detail"); }} onCheckout={startCheckout} />
       )}
-      {effective === "detail" && detail && <ProductDetail commerceEnabled={commerceEnabled} product={detail} qty={cart[detail.id] || 0} paymentMode={paymentMode} installmentCount={installmentCount} feeRate={credit.data?.feeRate || 0} onPaymentPlan={(mode, count) => { setPaymentMode(mode); setInstallmentCount(count); }} fleets={fleetList.map((fleet: any) => ({ id: fleetId(fleet), name: fleetName(fleet), plate: fleetPlate(fleet) }))} selectedFleetId={selectedFleet ? fleetId(selectedFleet) : 0} onFleetChange={setSelectedCashFleetId} onQty={changeQty} onCheckout={startCheckout} />}
-      {commerceEnabled && effective === "confirm" && <Confirm lines={lines} quote={quote.data} loading={createOrder.isLoading} onConfirm={() => createOrder.mutate()} />}
+      {effective === "detail" && detail && <ProductDetail commerceEnabled={commerceEnabled} product={detail} qty={cart[detail.id] || 0} remaining={availableCredit} canInstallments={canInstallments} installmentPlans={activeInstallmentPlans} installmentCount={effectiveInstallmentCount} feeRate={selectedPlan?.feeRate || 0} onInstallmentCount={(count) => setInstallmentCount(count)} onQty={changeQty} onCheckout={startCheckout} />}
+      {commerceEnabled && effective === "confirm" && <Confirm lines={lines} quote={quote.data} quoteLoading={quote.isLoading} quoteError={quote.isError} paymentMode={effectivePaymentMode} canInstallments={canInstallments} installmentPlans={activeInstallmentPlans} installmentCount={effectiveInstallmentCount} onInstallmentCount={(count) => setInstallmentCount(count)} installmentUnavailableReason={installmentUnavailableReason} loading={createOrder.isLoading} onPaymentMode={(mode) => setPaymentMode(mode)} onRetryQuote={() => { void quote.refetch(); }} onConfirm={() => createOrder.mutate()} />}
       {commerceEnabled && effective === "gateway" && payment && <Gateway amount={payment.amount} loading={pay.isLoading} onPay={() => pay.mutate()} />}
       {commerceEnabled && effective === "awaiting" && order.data && <AwaitingSeller order={order.data} shopName={(shops.data || []).find((s) => s.id === order.data!.shopId)?.name} />}
       {commerceEnabled && effective === "proforma" && order.data && <Proforma order={order.data} shopName={(shops.data || []).find((s) => s.id === order.data!.shopId)?.name} onPay={payFirst} />}

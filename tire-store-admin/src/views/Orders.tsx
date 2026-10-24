@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { Tab } from '../App';
 import { useFeedback } from '../lib/feedback';
-import { addDaysJ, dayDiff, fa, jFull, jShort, money } from '../lib/format';
+import { addDaysJ, dayDiff, fa, formatDateTimeFa, jFull, jShort, money } from '../lib/format';
 import { STATUS_META, type Order } from '../lib/mock';
 
 const TABS: { id: Tab; label: string }[] = [
@@ -175,6 +175,7 @@ function OrderCard({ o, codeShown, rejecting, onApprove, onAskReject, onCancelRe
           : o.apiStatus === 'Rejected' ? { t: 'رد شده', c: 'amber' }
             : STATUS_META[o.status];
   const date = jShort(addDaysJ(-o.dAgo));
+  const receivedAt = o.createdAt ? formatDateTimeFa(o.createdAt) : '';
   return (
     <article className="ocard">
       <div>
@@ -182,7 +183,7 @@ function OrderCard({ o, codeShown, rejecting, onApprove, onAskReject, onCancelRe
           <span className="o-no">{o.no}</span>
           <span className={`tag ${st.c}`}>{st.t}</span>
           <span className="o-date">
-            {o.dAgo === 0 ? 'امروز' : `${fa(o.dAgo)} روز پیش`} · {date}
+            {receivedAt ? `ثبت درخواست · ${receivedAt}` : `${o.dAgo === 0 ? 'امروز' : `${fa(o.dAgo)} روز پیش`} · ${date}`}
           </span>
           {o.fromApp && <span className="tag teal">ارسالی از اپ راننده</span>}
           {o.isDemo && <span className="tag amber">نمونه آزمایشی</span>}
@@ -232,8 +233,8 @@ function OrderCard({ o, codeShown, rejecting, onApprove, onAskReject, onCancelRe
       <div>
         <div className="o-sums">
           <div className="srow"><span>مبلغ فاکتور</span><b>{money(o.total)}</b></div>
-          {o.down > 0 && <div className="srow"><span>پیش‌پرداخت (نقدی از راننده)</span><b>{money(o.down)}</b></div>}
-          <div className="srow"><span>اعتبار (واریز سامانه)</span><b>{money(o.fin)}</b></div>
+          {o.down > 0 && <div className="srow"><span>{o.apiId ? o.paymentMode === 'Cash' ? 'پرداخت نقدی (پس از تأیید)' : 'مازاد اعتبار (داخل پرداخت اول)' : 'پیش‌پرداخت (نقدی از راننده)'}</span><b>{money(o.down)}</b></div>}
+          {(!o.apiId || o.paymentMode !== 'Cash') && <div className="srow"><span>{o.apiId ? 'بخش اقساطی با کارمزد' : 'اعتبار (واریز سامانه)'}</span><b>{money(o.fin)}</b></div>}
           <div className="srow tot"><span>دریافتی شما</span><b>{money(o.total)}</b></div>
           <div className="freefee">✨ بدون کارمزد برای فروشگاه</div>
         </div>

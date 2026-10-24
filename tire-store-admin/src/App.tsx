@@ -8,8 +8,9 @@ import Orders from './views/Orders';
 import Products from './views/Products';
 import AccessManagement from './views/AccessManagement';
 import ChangePassword from './views/ChangePassword';
+import InstallmentPlans from './views/InstallmentPlans';
 
-export type View = 'dashboard' | 'orders' | 'products' | 'access';
+export type View = 'dashboard' | 'orders' | 'products' | 'access' | 'installmentPlans';
 export type Tab = 'pending' | 'waitingPayment' | 'approved' | 'awaitingDriver' | 'delivered' | 'settled' | 'rejected';
 
 const mapOrder = (order: StoreOrder): Order => {
@@ -31,15 +32,15 @@ const mapOrder = (order: StoreOrder): Order => {
     createdAt: order.createdAt,
     no: order.proformaNumber,
     driver: 'راننده اپ',
-    fleet: order.fleetType || `ناوگان ${fa(order.fleetId)}`,
+    fleet: order.fleetType || (order.paymentMode === 'Cash' ? 'سفارش نقدی' : order.fleetId ? `ناوگان ${fa(order.fleetId)}` : 'بدون ناوگان'),
     plate,
     truck: order.fleetType || 'درخواست خرید تایر',
     dAgo: daysSince,
     fromApp: true,
     items: order.items.map((item) => ({ b: item.title, s: item.size, q: item.quantity, p: item.unitPrice })),
     total: order.total,
-    down: 0,
-    fin: order.total,
+    down: order.paymentMode === 'Cash' ? order.total : order.downPayment ?? 0,
+    fin: order.paymentMode === 'Cash' ? 0 : order.total - (order.downPayment ?? 0),
     status,
     code: order.deliveryCode?.replace(/^BNPL-/, '') ?? '',
   };
@@ -88,6 +89,11 @@ const NAV: { id: View; label: string; icon: ReactNode }[] = [
     id: 'access',
     label: 'فروشگاه و کاربران',
     icon: svg(<><circle cx="9" cy="8" r="3" /><path d="M3.5 20v-1.5a5.5 5.5 0 0 1 11 0V20z" /><path d="M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 2.5 4.3V20" /></>),
+  },
+  {
+    id: 'installmentPlans',
+    label: 'مدیریت اقساط',
+    icon: svg(<><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h5M8 16h3" /><circle cx="17" cy="16" r="2.5" /></>),
   },
 ];
 
@@ -190,7 +196,8 @@ export default function App() {
 
   const visibleNav = NAV.filter(item => item.id !== 'access' || session?.permissions.includes('platform.stores.manage'))
     .filter(item => item.id !== 'products' || session?.permissions.includes('catalog.products.read'))
-    .filter(item => item.id !== 'orders' || (isDemo && session?.permissions.includes('orders.read')));
+    .filter(item => item.id !== 'orders' || (isDemo && session?.permissions.includes('orders.read')))
+    .filter(item => item.id !== 'installmentPlans' || session?.permissions.includes('platform.installment-plans.manage'));
   const navButtons = visibleNav.map((item) => (
     <button
       key={item.id}
@@ -278,6 +285,9 @@ export default function App() {
         </section>
         <section className="view" hidden={view !== 'access'}>
           {view === 'access' && <AccessManagement />}
+        </section>
+        <section className="view" hidden={view !== 'installmentPlans'}>
+          {view === 'installmentPlans' && <InstallmentPlans storeId={activeStoreId} stores={stores} />}
         </section>
       </div>
     </>

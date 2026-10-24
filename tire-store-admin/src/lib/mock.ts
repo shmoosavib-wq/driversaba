@@ -44,7 +44,8 @@ export const STATUS_META: Record<OrderStatus, { t: string; c: string }> = {
   rejected: { t: 'رد شده', c: 'amber' },
 };
 
-export const createMockOrders = (): Order[] => [
+export const createMockOrders = (): Order[] => {
+  const orders: Order[] = [
   { id: 'o1', no: 'PF-1404-1042', driver: 'سیدحمید موسوی بیوکی', fleet: 'ناوگان باربری تابش', plate: ['۵۵۶ ب ۵۵', '۲۲'], truck: 'تریلی کفی', dAgo: 0, fromApp: true,
     items: [{ b: 'گلکسی MFS101', s: '315/80R22.5', q: 2, p: 14000000 }, { b: 'نکسن SB202', s: '275/70R22.5', q: 1, p: 6900000 }],
     total: 34900000, down: 3490000, fin: 31410000, status: 'pending', code: 'K7M2T' },
@@ -78,7 +79,14 @@ export const createMockOrders = (): Order[] => [
   { id: 'o11', no: 'PF-1404-1010', driver: 'راننده نمونه', fleet: 'ناوگان نمونه تحویل', plate: ['۱۲ ب ۳۴۵', '۶۸'], truck: 'لیفتراک ۳ تنی', dAgo: 9, fromApp: true,
     items: [{ b: 'نکسن SB202', s: '275/70R22.5', q: 1, p: 6900000 }],
     total: 7383000, down: 0, fin: 7383000, status: 'awaitingDriver', code: 'T6Y8P' },
-];
+  ];
+
+  const now = Date.now();
+  return orders.map((order, index) => ({
+    ...order,
+    createdAt: new Date(now - (order.dAgo * 24 + index) * 60 * 60 * 1000).toISOString(),
+  }));
+};
 
 const ACTIVE: OrderStatus[] = ['approved', 'delivered', 'settled'];
 

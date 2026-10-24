@@ -1,19 +1,18 @@
 import type { ReactNode } from "react";
-import { PaymentMode, TireProduct } from "@/services/tire-store-api";
+import { TireProduct } from "@/services/tire-store-api";
 import { getDiscount } from "../discount";
-import { fa, installmentAmount, toman } from "../helpers";
+import { fa, installmentBreakdown, toman } from "../helpers";
 import {
   BrandBar,
   BtnView,
-  PBottom,
+  PCardBottom,
   PCard,
   PIn,
   PInfo,
-  PInst,
   PMeta,
   PName,
   PPrice,
-  PSave,
+  PInst,
   PSize,
   PTop,
   Tag,
@@ -23,9 +22,10 @@ import DealRibbon from "./DealRibbon";
 
 type ProductCardProps = {
   product: TireProduct;
-  paymentMode: PaymentMode;
+  canInstallments: boolean;
   installmentCount: number;
   feeRate: number;
+  remaining?: number;
   commerceEnabled: boolean;
   gallery: ReactNode;
   onOpen: (product: TireProduct) => void;
@@ -33,14 +33,19 @@ type ProductCardProps = {
 
 export default function ProductCard({
   product,
-  paymentMode,
+  canInstallments,
   installmentCount,
   feeRate,
+  remaining,
   commerceEnabled,
   gallery,
   onOpen,
 }: ProductCardProps) {
   const deal = getDiscount(product.price, product.compareAtPrice);
+  const plan = installmentBreakdown(product.price, installmentCount, feeRate, canInstallments ? remaining : undefined);
+  const planText = plan.downPayment > 0
+    ? `پرداخت اول ≈ ${toman(plan.first)} · ${fa(installmentCount - 1)} قسط ≈ ${toman(plan.next)}`
+    : `${fa(installmentCount)} قسط · هر قسط ≈ ${toman(plan.first)} تومان`;
 
   return (
     <PCard $deal={deal.active}>
@@ -77,12 +82,9 @@ export default function ProductCard({
             </PMeta>
           </PInfo>
         </PTop>
-        <PBottom>
+        <PCardBottom>
           <div>
             <PPrice $sale={deal.active}>
-              <small className="price-label">
-                {deal.active ? "قیمت با تخفیف" : "قیمت هر جفت"}
-              </small>
               {deal.active ? (
                 <span className="was">{toman(deal.compareAt)}</span>
               ) : null}
@@ -90,21 +92,10 @@ export default function ProductCard({
                 {toman(product.price)} <small>تومان</small>
               </strong>
             </PPrice>
-            {deal.active && deal.tier !== "quiet" ? (
-              <PSave>
-                صرفه‌جویی <b>{toman(deal.savings)} تومان</b>
-              </PSave>
-            ) : null}
-            <PInst>
-              {commerceEnabled
-                ? paymentMode === "Cash"
-                  ? "پرداخت نقدی"
-                  : `یا ${fa(installmentCount)} قسط · هر قسط حدود ${toman(installmentAmount(product.price, installmentCount, feeRate))} تومان`
-                : "ثبت سفارش به‌زودی فعال می‌شود"}
-            </PInst>
+            {commerceEnabled && <PInst>{canInstallments ? "" : "با اعتبار کافی · "}{planText}</PInst>}
           </div>
           <BtnView onClick={() => onOpen(product)}>
-            {commerceEnabled && product.stock > 0 ? "انتخاب لاستیک" : "جزئیات کالا"}
+            جزئیات
             <svg
               width="8"
               height="12"
@@ -118,7 +109,7 @@ export default function ProductCard({
               <path d="M6 1 2 6l4 5" />
             </svg>
           </BtnView>
-        </PBottom>
+        </PCardBottom>
       </PIn>
     </PCard>
   );

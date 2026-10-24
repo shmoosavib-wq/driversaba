@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { PaymentMode, TireProduct, TireShop } from "@/services/tire-store-api";
+import { TireProduct, TireShop, TireInstallmentPlan } from "@/services/tire-store-api";
 import { Shop as ShopCard } from "./style";
 import { Section } from "./style2";
 import {
-  Bar, BarBtn, BarInfo, CalcRow, CalcTotal, Chip, DBrand, DCard, DName, Desc, Empty, Media, PBottom, PInst,
-  PPrice, PSave, PSize, Qty, SecTitle, SpecRow, Tag,
+  Bar, BarBtn, BarInfo, CalcRow, CalcTotal, DBrand, DCard, DName, Desc, Empty, Media, PBottom,
+  PInst, PPrice, PSave, PSize, Qty, SecTitle, SpecRow, Tag, InstallmentModes,
 } from "./style3";
-import { fa, installmentAmount, toman } from "./helpers";
+import { fa, toman } from "./helpers";
 import { getDiscount } from "./discount";
 import ProductCard from "./components/ProductCard";
 import DealRibbon from "./components/DealRibbon";
@@ -116,20 +116,17 @@ type Props = {
   products: TireProduct[];
   cart: Record<number, number>;
   remaining?: number;
-  total: number;
-  paymentMode: PaymentMode;
+  canInstallments: boolean;
+  installmentPlans: TireInstallmentPlan[];
   installmentCount: number;
-  feeRate?: number;
-  onPaymentPlan: (mode: PaymentMode, count: number) => void;
-  fleets: { id: number; name: string; plate: string }[];
-  selectedFleetId: number;
-  onFleetChange: (id: number) => void;
+  feeRate: number;
+  onInstallmentCount: (count: 2 | 4) => void;
   onQty: (p: TireProduct, delta: number) => void;
   onOpen: (p: TireProduct) => void;
   onCheckout: () => void;
 };
 
-export function Catalog({ commerceEnabled, shop, products, cart, remaining, total, paymentMode, installmentCount, feeRate = 0, onPaymentPlan, fleets, selectedFleetId, onFleetChange, onQty, onOpen, onCheckout }: Props) {
+export function Catalog({ commerceEnabled, shop, products, cart, remaining, canInstallments, installmentPlans, installmentCount, feeRate, onInstallmentCount, onQty, onOpen, onCheckout }: Props) {
   const [filters, setFilters] = useState<TireFilters>(EMPTY_FILTERS);
   const [open, setOpen] = useState(false);
   const brands = useMemo(() => [...new Set(products.map((p) => p.brand).filter(Boolean))].sort(), [products]);
@@ -138,11 +135,9 @@ export function Catalog({ commerceEnabled, shop, products, cart, remaining, tota
   const filtered = useMemo(() => matches(filters), [matches, filters]);
   const active = filterCount(filters);  const count = Object.values(cart).reduce((a, b) => a + b, 0);
   const subtotal = products.reduce((sum, product) => sum + product.price * (cart[product.id] || 0), 0);
-  const over = paymentMode === "Installments" && remaining !== undefined && subtotal > remaining;
   return (
     <>
       <div style={{ height: 12 }} />
-      {remaining !== undefined && <Chip>💳 <span>اعتبار باقی‌مانده تو:</span><b>{toman(remaining)} تومان</b></Chip>}
       {shop && <SecTitle style={{ marginTop: 2 }}>{shop.name}</SecTitle>}
       <FBar>
         <FBtn $on={active > 0} onClick={() => setOpen(true)}>
@@ -158,34 +153,38 @@ export function Catalog({ commerceEnabled, shop, products, cart, remaining, tota
         <ProductCard
           key={product.id}
           product={product}
-          paymentMode={paymentMode}
+          canInstallments={canInstallments}
           installmentCount={installmentCount}
           feeRate={feeRate}
+          remaining={remaining}
           commerceEnabled={commerceEnabled}
           gallery={<SwipeGallery p={product} variant="card" />}
           onOpen={onOpen}
         />
       ))}
       {commerceEnabled && <Bar>
-        <BarInfo $warn={over}>
-          {count ? (over ? "مبلغ کالاها از اعتبار باقی‌مانده بیشتر است" : `${fa(count)} جفت در سبد`) : "برای ادامه، تعداد لاستیک را مشخص کن"}
-          {count > 0 && <b>{toman(total)} تومان</b>}
+        <BarInfo>
+          {count ? `${fa(count)} جفت در سبد` : "برای ادامه، تعداد لاستیک را مشخص کن"}
+          {count > 0 && <b>{toman(subtotal)} تومان</b>}
         </BarInfo>
-        <BarBtn disabled={!count || over} onClick={onCheckout}>ادامه خرید</BarBtn>
+        <BarBtn disabled={!count} onClick={onCheckout}>ادامه خرید</BarBtn>
       </Bar>}
     </>
   );
 }
 
-type DetailProps = { commerceEnabled: boolean; product: TireProduct; qty: number; paymentMode: PaymentMode; installmentCount: number; feeRate?: number; onPaymentPlan: (mode: PaymentMode, count: number) => void; fleets: { id: number; name: string; plate: string }[]; selectedFleetId: number; onFleetChange: (id: number) => void; onQty: (p: TireProduct, delta: number) => void; onCheckout: () => void };
+type DetailProps = { commerceEnabled: boolean; product: TireProduct; qty: number; remaining?: number; canInstallments: boolean; installmentPlans: TireInstallmentPlan[]; installmentCount: number; feeRate: number; onInstallmentCount: (count: 2 | 4) => void; onQty: (p: TireProduct, delta: number) => void; onCheckout: () => void };
 
-export function ProductDetail({ commerceEnabled, product: p, qty, paymentMode, installmentCount, feeRate = 0, onPaymentPlan, fleets, selectedFleetId, onFleetChange, onQty, onCheckout }: DetailProps) {
+export function ProductDetail({ commerceEnabled, product: p, qty, remaining, canInstallments, installmentPlans, installmentCount, feeRate, onInstallmentCount, onQty, onCheckout }: DetailProps) {
   const [calc, setCalc] = useState(1);
   const n = qty || calc;
   const deal = getDiscount(p.price, p.compareAtPrice);
-  const total = Math.round(p.price * n * (paymentMode === "Cash" ? 1 : 1 + feeRate));
-  const first = Math.ceil(total / (paymentMode === "Cash" ? 1 : installmentCount));
-  const next = Math.round((total - first) / Math.max(1, installmentCount - 1));
+  const subtotal = p.price * n;
+  const financedPrincipal = Math.min(subtotal, Math.max(0, canInstallments ? remaining ?? subtotal : subtotal));
+  const downPayment = subtotal - financedPrincipal;
+  const financedTotal = financedPrincipal + Math.round(financedPrincipal * feeRate);
+  const firstInstallment = downPayment + Math.ceil(financedTotal / installmentCount);
+  const nextInstallment = installmentCount > 1 ? Math.round((financedTotal - Math.ceil(financedTotal / installmentCount)) / (installmentCount - 1)) : 0;
   const rows: [string, string | number | undefined][] = [
     ["برند", p.brand], ["مدل", p.model], ["سایز", p.size],
     ["پهنا (mm)", p.width ? fa(p.width) : ""], ["فاق (%)", p.profile ? fa(p.profile) : ""],
@@ -214,7 +213,10 @@ export function ProductDetail({ commerceEnabled, product: p, qty, paymentMode, i
             </PPrice>
             {deal.active ? <PSave>صرفه‌جویی <b>{toman(deal.savings)} تومان</b></PSave> : null}
           </div>
-          <PInst>{commerceEnabled ? paymentMode === "Cash" ? "پرداخت نقدی · بدون کارمزد" : `${fa(installmentCount)} قسط ماهانه · هر قسط حدود ${toman(installmentAmount(p.price, installmentCount, feeRate))} تومان` : "ثبت سفارش در این مرحله غیرفعال است"}</PInst>
+          {commerceEnabled && installmentPlans.length > 0 && <>
+            <PInst>{downPayment > 0 ? `پرداخت اول حدود ${toman(firstInstallment)} تومان · ${fa(installmentCount - 1)} قسط بعدی حدود ${toman(nextInstallment)} تومان` : `${fa(installmentCount)} قسط حدود ${toman(firstInstallment)} تومان${canInstallments ? "" : " · نیازمند اعتبار تأییدشده"}`}</PInst>
+            {installmentPlans.length > 1 && <InstallmentModes aria-label="انتخاب تعداد اقساط">{installmentPlans.map(plan => <button key={plan.installmentCount} type="button" className={installmentCount === plan.installmentCount ? "on" : ""} aria-pressed={installmentCount === plan.installmentCount} onClick={() => onInstallmentCount(plan.installmentCount)}>{fa(plan.installmentCount)} قسط</button>)}</InstallmentModes>}
+          </>}
         </PBottom>
       </DCard>
       <SecTitle>مشخصات فنی</SecTitle>
@@ -223,7 +225,7 @@ export function ProductDetail({ commerceEnabled, product: p, qty, paymentMode, i
       </DCard>
       <SecTitle>توضیحات محصول</SecTitle><DCard><Desc>{p.description || "توضیحی برای این محصول ثبت نشده است."}</Desc></DCard>
       {commerceEnabled ? <>
-        <SecTitle>{paymentMode === "Cash" ? "خلاصه مبلغ خرید" : "محاسبه اقساط"}</SecTitle>
+      <SecTitle>قیمت و تعداد</SecTitle>
         <DCard>
           <CalcRow>
             <span>تعداد (جفت)</span>
@@ -233,8 +235,8 @@ export function ProductDetail({ commerceEnabled, product: p, qty, paymentMode, i
               <button onClick={() => (qty ? onQty(p, 1) : setCalc(Math.min(p.stock, calc + 1)))} disabled={n >= p.stock}>+</button>
             </Qty>
           </CalcRow>
-          {paymentMode === "Cash" ? <CalcRow><span>قابل پرداخت پس از تأیید فروشنده</span><b>{toman(total)} تومان</b></CalcRow> : <><CalcRow><span>قسط اول پس از تأیید فروشنده</span><b>{toman(first)} تومان</b></CalcRow><CalcRow><span>{fa(installmentCount - 1)} قسط بعدی · ماهانه</span><b>هر قسط حدود {toman(next)} تومان</b></CalcRow></>}
-          <CalcTotal><span>{paymentMode === "Cash" ? "مبلغ نهایی خرید نقدی" : "مجموع با کارمزد اقساط"}</span><b>{toman(total)} تومان</b></CalcTotal>
+          <CalcRow><span>قیمت هر جفت</span><b>{toman(p.price)} تومان</b></CalcRow>
+          <CalcTotal><span>جمع قیمت کالا</span><b>{toman(subtotal)} تومان</b></CalcTotal>
         </DCard>
         <Bar>
           <BarInfo>{qty ? `در سبد خرید فعلی: ${fa(qty)} جفت` : "در سبد نیست"}</BarInfo>

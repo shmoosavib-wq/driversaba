@@ -4,6 +4,20 @@ export const fa = (value: string | number): string => String(value).replace(/\d/
 
 export const money = (n: number): string => n.toLocaleString('fa-IR');
 
+export const formatDateTimeFa = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return new Intl.DateTimeFormat('fa-IR', {
+    timeZone: 'Asia/Tehran',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
 export const toLatinDigits = (value: string): string =>
   value
     .replace(/[۰-۹]/g, (d) => String(FD.indexOf(d)))

@@ -353,6 +353,36 @@ namespace TireStore.Infrastructure.Migrations
                     b.ToTable("StoreAdminUserRoles", (string)null);
                 });
 
+            modelBuilder.Entity("TireStore.Domain.Entities.StoreInstallmentPlan", b =>
+                {
+                    b.Property<int>("StoreId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InstallmentCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("FeeRate")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("StoreId", "InstallmentCount");
+
+                    b.HasIndex("StoreId", "IsActive");
+
+                    b.ToTable("StoreInstallmentPlans", (string)null);
+                });
+
             modelBuilder.Entity("TireStore.Infrastructure.StoreInventoryRow", b =>
                 {
                     b.Property<int>("StoreId")
@@ -480,6 +510,15 @@ namespace TireStore.Infrastructure.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TireStore.Domain.Entities.StoreInstallmentPlan", b =>
+                {
+                    b.HasOne("TireStore.Infrastructure.StoreRow", null)
+                        .WithMany()
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TireStore.Infrastructure.StoreInventoryRow", b =>

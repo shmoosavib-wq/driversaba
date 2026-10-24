@@ -15,6 +15,7 @@ public sealed class StoreDatabase(DbContextOptions<StoreDatabase> options) : DbC
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductBrand> ProductBrands => Set<ProductBrand>();
     public DbSet<StoreInventoryRow> StoreInventory => Set<StoreInventoryRow>();
+    public DbSet<StoreInstallmentPlan> StoreInstallmentPlans => Set<StoreInstallmentPlan>();
     public DbSet<StoreAdminUser> StoreAdminUsers => Set<StoreAdminUser>();
     public DbSet<StoreAdminRole> StoreAdminRoles => Set<StoreAdminRole>();
     public DbSet<StoreAdminPermission> StoreAdminPermissions => Set<StoreAdminPermission>();
@@ -37,6 +38,16 @@ public sealed class StoreDatabase(DbContextOptions<StoreDatabase> options) : DbC
             entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
             entity.Property(x => x.Address).HasMaxLength(300).IsRequired();
             entity.Property(x => x.ContactPhone).HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<StoreInstallmentPlan>(entity =>
+        {
+            entity.ToTable("StoreInstallmentPlans");
+            entity.HasKey(x => new { x.StoreId, x.InstallmentCount });
+            entity.Property(x => x.FeeRate).HasPrecision(9, 6);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(64).IsRequired();
+            entity.HasOne<StoreRow>().WithMany().HasForeignKey(x => x.StoreId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => new { x.StoreId, x.IsActive });
         });
 
         modelBuilder.Entity<StoreAdminUser>(entity =>
@@ -206,11 +217,18 @@ public sealed class EfStore : IProductRepository, IShopRepository, IBrandReposit
         if (offset >= total || offset > int.MaxValue)
             return new PagedResult<Product>(Array.Empty<Product>(), total, page, pageSize);
 
-        var products = query.OrderByDescending(product => product.CreatedAt)
-            .ThenByDescending(product => product.Id)
-            .Skip((int)offset)
-            .Take(pageSize)
-            .ToList();
+        var products = db.Database.IsSqlite()
+            ? query.ToList()
+                .OrderByDescending(product => product.CreatedAt)
+                .ThenByDescending(product => product.Id)
+                .Skip((int)offset)
+                .Take(pageSize)
+                .ToList()
+            : query.OrderByDescending(product => product.CreatedAt)
+                .ThenByDescending(product => product.Id)
+                .Skip((int)offset)
+                .Take(pageSize)
+                .ToList();
         var productIds = products.Select(product => product.Id).ToArray();
         var targetStore = shopId ?? AdminStoreId;
         var inventories = db.StoreInventory.AsNoTracking()
@@ -471,6 +489,7 @@ public sealed class EfStore : IProductRepository, IShopRepository, IBrandReposit
             db.Database.EnsureCreated();
             EnsureAccessSchema(db);
             EnsureBrandSchema(db);
+            EnsureInstallmentPlanSchema(db);
         }
         else
         {
@@ -481,7 +500,11 @@ public sealed class EfStore : IProductRepository, IShopRepository, IBrandReposit
 
         SeedBrands(db);
         SeedAccessControl(db);
-        if (!isSqlite || !seedDemoData || db.Stores.Any()) return;
+        if (!isSqlite || !seedDemoData || db.Stores.Any())
+        {
+            SeedInstallmentPlans(db);
+            return;
+        }
 
         var connection = db.Database.GetDbConnection();
         var closeConnection = connection.State != ConnectionState.Open;
@@ -508,6 +531,43 @@ public sealed class EfStore : IProductRepository, IShopRepository, IBrandReposit
         Seed(db, "GALAXY", "MFS101", "315/80R22.5", 315, 80, "R22.5", "ترکشن", "156/150L", "72dB", 2025, "اندونزی", 24, 14_000_000m, 20, [1, 2, 3], 16_800_000m);
         Seed(db, "CHAOYANG", "CR602", "295/80R22.5", 295, 80, "R22.5", "جاده‌ای", "152/149M", "70dB", 2025, "چین", 18, 9_900_000m, 20, [1, 2]);
         Seed(db, "NEXEN TIRE", "SB202", "275/70R22.5", 275, 70, "R22.5", "همه‌منظوره", "148/145M", "69dB", 2024, "کره جنوبی", 12, 6_900_000m, 20, [1, 2, 3]);
+        SeedInstallmentPlans(db);
+    }
+
+    private static void EnsureInstallmentPlanSchema(StoreDatabase db)
+    {
+        db.Database.ExecuteSqlRaw("""
+            CREATE TABLE IF NOT EXISTS StoreInstallmentPlans (
+                StoreId INTEGER NOT NULL,
+                InstallmentCount INTEGER NOT NULL,
+                FeeRate TEXT NOT NULL,
+                IsActive INTEGER NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                UpdatedBy TEXT NOT NULL,
+                PRIMARY KEY (StoreId, InstallmentCount),
+                FOREIGN KEY (StoreId) REFERENCES Stores(Id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS IX_StoreInstallmentPlans_StoreId_IsActive
+            ON StoreInstallmentPlans(StoreId, IsActive);
+            """);
+    }
+
+    private static void SeedInstallmentPlans(StoreDatabase db)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var storeIds = db.Stores.AsNoTracking().Select(store => store.Id).ToList();
+        var configured = db.StoreInstallmentPlans.AsNoTracking()
+            .Where(plan => storeIds.Contains(plan.StoreId))
+            .Select(plan => new { plan.StoreId, plan.InstallmentCount })
+            .ToHashSet();
+        foreach (var storeId in storeIds)
+        {
+            if (!configured.Contains(new { StoreId = storeId, InstallmentCount = 2 }))
+                db.StoreInstallmentPlans.Add(new StoreInstallmentPlan { StoreId = storeId, InstallmentCount = 2, FeeRate = 0.07m, IsActive = false, UpdatedAt = now, UpdatedBy = "system" });
+            if (!configured.Contains(new { StoreId = storeId, InstallmentCount = 4 }))
+                db.StoreInstallmentPlans.Add(new StoreInstallmentPlan { StoreId = storeId, InstallmentCount = 4, FeeRate = 0.07m, IsActive = true, UpdatedAt = now, UpdatedBy = "system" });
+        }
+        if (db.ChangeTracker.HasChanges()) db.SaveChanges();
     }
 
     private static void EnsureBrandSchema(StoreDatabase db)
@@ -689,6 +749,7 @@ public sealed class EfStore : IProductRepository, IShopRepository, IBrandReposit
             new StoreAdminPermission { Code = "orders.reject", Name = "رد سفارش", Scope = "store" },
             new StoreAdminPermission { Code = "orders.deliver", Name = "ثبت تحویل", Scope = "store" }
         };
+        permissions = permissions.Append(new StoreAdminPermission { Code = "platform.installment-plans.manage", Name = "مدیریت شرایط اقساط", Scope = "platform" }).ToArray();
         foreach (var permission in permissions)
             if (!db.StoreAdminPermissions.Any(item => item.Code == permission.Code)) db.StoreAdminPermissions.Add(permission);
 

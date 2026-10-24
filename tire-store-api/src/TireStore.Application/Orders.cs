@@ -8,44 +8,48 @@ public sealed class PricingOptions
 {
     public decimal FeeRate { get; set; } = 0.07m;
     public int Installments { get; set; } = 4;
-    public bool EnforceCreditLimit { get; set; } = true;
 }
 
 public sealed record OrderLineInput(int ProductId, int Quantity);
 public sealed record QuoteInput(List<OrderLineInput>? Items, int? ShopId = null, string? PaymentMode = "Installments", int InstallmentCount = 4);
-public sealed record CreateOrderInput(int ShopId, int FleetId, List<OrderLineInput>? Items, string? FleetPlate = null, string? FleetType = null, string? PaymentMode = "Installments", int InstallmentCount = 4);
+public sealed record CreateOrderInput(int ShopId, int? FleetId, List<OrderLineInput>? Items, string? FleetPlate = null, string? FleetType = null, string? PaymentMode = "Installments", int InstallmentCount = 4);
 public sealed record DeliveryWindowInput(string Date, int StartHour);
 public sealed record SellerDeliveryInput(string Code);
-public sealed record QuoteDto(decimal Subtotal, decimal Fee, decimal Total, decimal FirstInstallment, decimal NextInstallment, decimal LastInstallment, int Installments, bool FirstPaymentAtPurchase, string PaymentMode);
+public sealed record QuoteDto(decimal Subtotal, decimal Fee, decimal Total, decimal DownPayment, decimal FinancedPrincipal, decimal FirstInstallment, decimal NextInstallment, decimal LastInstallment, int Installments, bool FirstPaymentAtPurchase, string PaymentMode, bool CreditEligible);
 
 public sealed record PayInstallmentInput(string? Gateway);
 
-public sealed class OrderService(IOrderRepository orders, IProductRepository products, ICreditRepository credits, PricingOptions pricing)
+public sealed class OrderService(IOrderRepository orders, IProductRepository products, ICreditRepository credits, IInstallmentPlanRepository installmentPlans)
 {
     private const string CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
-    public QuoteDto Quote(QuoteInput input) => BuildQuote(ResolveLines(input.Items, input.ShopId ?? 1).Lines, input.PaymentMode, input.InstallmentCount);
+    public QuoteDto Quote(QuoteInput input)
+    {
+        var shopId = input.ShopId ?? 1;
+        return BuildQuote(ResolveLines(input.Items, shopId).Lines, shopId, input.PaymentMode, input.InstallmentCount, credits.Get(), allowCreditPreview: true);
+    }
 
     public Order Create(CreateOrderInput input)
     {
         var (lines, quantities) = ResolveLines(input.Items, input.ShopId);
-        var quote = BuildQuote(lines, input.PaymentMode, input.InstallmentCount);
         var credit = credits.Get();
+        var quote = BuildQuote(lines, input.ShopId, input.PaymentMode, input.InstallmentCount, credit);
         if (quote.PaymentMode == "Installments")
         {
             if (credit.Status != "Approved") throw new ValidationException("اعتبار شما هنوز فعال نشده است.");
-            if (pricing.EnforceCreditLimit && credit.Used > 0) throw new ValidationException("سقف اعتبار شما برای خرید قبلی استفاده شده است.");
-            if (pricing.EnforceCreditLimit && credit.Limit - credit.Used < quote.Subtotal) throw new ValidationException("اعتبار باقی‌مانده کافی نیست.");
+            if (quote.FinancedPrincipal <= 0) throw new ValidationException("اعتبار کافی نیست؛ برای ادامه روش پرداخت نقدی را انتخاب کنید.");
+            if (input.FleetId is null or <= 0) throw new ValidationException("خرید اقساطی باید به ناوگان متصل به اعتبار مرتبط باشد.");
         }
         if (!products.TryReserveStock(input.ShopId, quantities)) throw new ValidationException("موجودی محصول در این فروشگاه کافی نیست.");
-        if (quote.PaymentMode == "Installments") credits.AddUsed(quote.Subtotal);
+        if (quote.PaymentMode == "Installments") credits.AddUsed(quote.FinancedPrincipal);
 
         var id = orders.NextOrderId();
         var order = new Order
         {
-            Id = id, ShopId = input.ShopId, FleetId = input.FleetId,
-            FleetPlate = input.FleetPlate?.Trim() ?? "", FleetType = input.FleetType?.Trim() ?? "",
+            Id = id, ShopId = input.ShopId, FleetId = quote.PaymentMode == "Cash" ? null : input.FleetId,
+            FleetPlate = quote.PaymentMode == "Cash" ? "" : input.FleetPlate?.Trim() ?? "", FleetType = quote.PaymentMode == "Cash" ? "" : input.FleetType?.Trim() ?? "",
             Items = lines, Subtotal = quote.Subtotal, Fee = quote.Fee, Total = quote.Total,
+            DownPayment = quote.DownPayment, FinancedPrincipal = quote.FinancedPrincipal,
             PaymentMode = quote.PaymentMode, InstallmentCount = quote.Installments,
             Status = OrderStatus.AwaitingSellerApproval,
             ProformaNumber = $"PF-{DateTimeOffset.UtcNow:yyMMdd}-{id:D4}"
@@ -82,10 +86,10 @@ public sealed class OrderService(IOrderRepository orders, IProductRepository pro
         if (order.Status is OrderStatus.Approved or OrderStatus.Rejected or OrderStatus.AwaitingDriverConfirm or OrderStatus.Delivered) throw new ValidationException("امکان رد این سفارش وجود ندارد.");
         var refunded = orders.GetInstallments()
             .Where(i => i.OrderId == id && i.Status == "Paid")
-            .Sum(i => Math.Round(i.Amount * order.Subtotal / order.Total));
+            .Sum(i => Math.Round((i.Number == 1 ? Math.Max(0, i.Amount - order.DownPayment) : i.Amount) * order.FinancedPrincipal / Math.Max(1, order.Total - order.DownPayment)));
         order.Status = OrderStatus.Rejected;
         products.ReleaseStock(order.ShopId, order.Items.Select(i => (i.ProductId, i.Quantity)).ToList());
-        if (order.PaymentMode == "Installments") credits.AddUsed(-(order.Subtotal - refunded));
+        if (order.PaymentMode == "Installments") credits.AddUsed(-(order.FinancedPrincipal - refunded));
         return order;
     }
 
@@ -171,18 +175,32 @@ public sealed class OrderService(IOrderRepository orders, IProductRepository pro
         return (lines, quantities);
     }
 
-    private QuoteDto BuildQuote(List<OrderItem> lines, string? paymentMode = "Installments", int installmentCount = 4)
+    private QuoteDto BuildQuote(List<OrderItem> lines, int shopId, string? paymentMode = "Installments", int installmentCount = 4, Credit? credit = null, bool allowCreditPreview = false)
     {
         var mode = string.Equals(paymentMode, "Cash", StringComparison.OrdinalIgnoreCase) ? "Cash" : "Installments";
-        if (mode == "Installments" && installmentCount is not (2 or 3 or 4))
+        if (mode == "Installments" && installmentCount is not (2 or 4))
             throw new ValidationException("تعداد اقساط باید ۲، ۳ یا ۴ باشد.");
         var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
         var count = mode == "Cash" ? 1 : installmentCount;
-        var fee = mode == "Cash" ? 0 : Math.Round(subtotal * pricing.FeeRate);
+        var plan = mode == "Installments"
+            ? installmentPlans.GetForStore(shopId, activeOnly: true).SingleOrDefault(item => item.InstallmentCount == installmentCount)
+                ?? throw new ValidationException("این روش اقساطی برای فروشگاه فعال نیست.")
+            : null;
+        var availableCredit = credit?.Status == "Approved"
+            ? Math.Max(0, credit.Limit - credit.Used)
+            : 0;
+        if (mode == "Installments" && availableCredit <= 0 && !allowCreditPreview)
+            throw new ValidationException("اعتبار اقساطی فعالی ندارید؛ روش پرداخت نقدی را انتخاب کنید.");
+        var creditEligible = mode == "Cash" || availableCredit > 0;
+        var financedPrincipal = mode == "Cash" ? 0 : Math.Min(subtotal, creditEligible ? availableCredit : subtotal);
+        var downPayment = mode == "Cash" ? 0 : subtotal - financedPrincipal;
+        var fee = mode == "Cash" ? 0 : Math.Round(financedPrincipal * plan!.FeeRate);
         var total = subtotal + fee;
-        var first = count == 1 ? total : Math.Ceiling(total / count);
-        var next = count > 1 ? Math.Round((total - first) / (count - 1)) : 0;
-        var last = count > 1 ? total - first - next * (count - 2) : 0;
-        return new QuoteDto(subtotal, fee, total, first, next, last, count, count == 1, mode);
+        var financedScheduleTotal = total - downPayment;
+        var firstScheduled = count == 1 ? total : Math.Ceiling(financedScheduleTotal / count);
+        var first = count == 1 ? firstScheduled : downPayment + firstScheduled;
+        var next = count > 1 ? Math.Round((financedScheduleTotal - firstScheduled) / (count - 1)) : 0;
+        var last = count > 1 ? financedScheduleTotal - firstScheduled - next * (count - 2) : 0;
+        return new QuoteDto(subtotal, fee, total, downPayment, financedPrincipal, first, next, last, count, count == 1, mode, creditEligible);
     }
 }

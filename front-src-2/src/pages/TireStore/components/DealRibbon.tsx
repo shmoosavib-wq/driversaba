@@ -8,11 +8,7 @@ export default function DealRibbon({ deal }: DealRibbonProps) {
   if (!deal.active) return null;
 
   return (
-    <span className="deal-ribbon-wrap">
-      <span
-        className={`deal-ribbon${deal.tier === "special" ? " is-special" : ""}`}
-        aria-hidden="true"
-      />
+    <span className={`deal-ribbon-wrap${deal.tier === "special" ? " is-special" : ""}`}>
       <i
         className="deal-ribbon-txt"
         role="img"

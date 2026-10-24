@@ -34,6 +34,7 @@ public static class DependencyInjection
         }
 
         services.AddSingleton<IAdminAccessRepository, AdminAccessStore>();
+        services.AddSingleton<IInstallmentPlanRepository, EfInstallmentPlanRepository>();
         services.AddSingleton<IAdminPasswordHasher, AdminPasswordHasher>();
         services.AddSingleton<AdminAccessService>();
         services.AddSingleton<EfStore>(sp => new EfStore(
